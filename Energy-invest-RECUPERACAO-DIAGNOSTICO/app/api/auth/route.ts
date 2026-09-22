@@ -53,7 +53,9 @@ export async function POST(request: Request) {
       return Response.json({ ok: true, authenticated: true });
     }
 
-    const appUrl = new URL(request.url).origin;
+    const appUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://energy-invest-two.vercel.app";
 
     if (d.action === "signup") {
       // Use the server-side registration function. It creates an already-confirmed
