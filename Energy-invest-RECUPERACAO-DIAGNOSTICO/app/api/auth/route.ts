@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     const appUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://energy-invest-two.vercel.app";
+      "https://energy-invest-git-main-energy-invest.vercel.app";
 
     if (d.action === "signup") {
       // Use the server-side registration function. It creates an already-confirmed
