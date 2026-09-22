@@ -1,0 +1,4 @@
+-- Referral program is active in the connected Supabase project.
+-- Current business rule: R$20 one-time bonus to the referrer after the referred user
+-- completes a first qualifying project purchase of at least R$50.
+-- Live database migration already applied through Supabase.
