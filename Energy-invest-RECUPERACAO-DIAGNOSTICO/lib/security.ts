@@ -1,42 +1,141 @@
 import "server-only";
 
-const buckets = new Map<string, { count: number; reset: number }>();
+type RateLimitOptions = {
+  limit?: number;
+  windowSeconds?: number;
+  failClosed?: boolean;
+};
 
-export async function rateLimit(key: string) {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+export class RateLimitError extends Error {
+  constructor(message = "Muitas tentativas. Aguarde um momento.") {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
+const buckets = new Map<
+  string,
+  { count: number; reset: number }
+>();
+
+export function clientIp(request: Request) {
+  const forwarded =
+    request.headers.get("x-forwarded-for");
+
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim() || "unknown";
+  }
+
+  return (
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown"
+  );
+}
+
+export async function rateLimit(
+  key: string,
+  options: RateLimitOptions = {},
+) {
+  const limit = options.limit ?? 20;
+  const windowSeconds =
+    options.windowSeconds ?? 60;
+
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL;
+
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (url && token) {
-    const bucket = `energy:${key}:${Math.floor(Date.now() / 60000)}`;
-    const r = await fetch(`${url}/pipeline`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+    const bucketWindow = Math.floor(
+      Date.now() /
+        (windowSeconds * 1000),
+    );
+
+    const bucket =
+      `energy:${key}:${bucketWindow}`;
+
+    const response = await fetch(
+      `${url}/pipeline`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify([
+          ["INCR", bucket],
+          [
+            "EXPIRE",
+            bucket,
+            windowSeconds + 5,
+          ],
+        ]),
+        cache: "no-store",
       },
-      body: JSON.stringify([
-        ["INCR", bucket],
-        ["EXPIRE", bucket, 65],
-      ]),
-    });
-    if (!r.ok) throw new Error("Proteção temporariamente indisponível.");
-    const data = await r.json();
-    if (data[0]?.error || typeof data[0]?.result !== "number")
-      throw new Error("Proteção indisponível.");
-    if (data[0].result > 20)
-      throw new Error("Muitas tentativas. Aguarde um minuto.");
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Proteção temporariamente indisponível.",
+      );
+    }
+
+    const data = await response.json();
+
+    const count = data?.[0]?.result;
+
+    if (typeof count !== "number") {
+      throw new Error(
+        "Proteção temporariamente indisponível.",
+      );
+    }
+
+    if (count > limit) {
+      throw new RateLimitError();
+    }
+
     return;
   }
 
-  // Fallback local para o ambiente de teste sem serviço externo. Em produção,
-  // prefira um limitador distribuído para compartilhar contagens entre regiões.
-  const now = Date.now();
-  if (buckets.size > 10000) buckets.clear();
-  const b = buckets.get(key);
-  if (b && b.reset > now) {
-    if (++b.count > 20)
-      throw new Error("Muitas tentativas. Aguarde um minuto.");
-  } else {
-    buckets.set(key, { count: 1, reset: now + 60000 });
+  // Para operações sensíveis, produção NÃO pode
+  // depender de rate limit em memória.
+  if (
+    options.failClosed &&
+    process.env.NODE_ENV === "production"
+  ) {
+    throw new Error(
+      "Proteção de segurança indisponível. Tente novamente mais tarde.",
+    );
   }
+
+  const now = Date.now();
+  const duration =
+    windowSeconds * 1000;
+
+  if (buckets.size > 10000) {
+    buckets.clear();
+  }
+
+  const current =
+    buckets.get(key);
+
+  if (
+    current &&
+    current.reset > now
+  ) {
+    current.count += 1;
+
+    if (current.count > limit) {
+      throw new RateLimitError();
+    }
+
+    return;
+  }
+
+  buckets.set(key, {
+    count: 1,
+    reset: now + duration,
+  });
 }
