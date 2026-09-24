@@ -1,4 +1,4 @@
-[SECURITY-INCIDENT.md](https://github.com/user-attachments/files/32629014/SECURITY-INCIDENT.md)# EnergyInvest — resposta ao incidente e hardening
+
 
 ## Antes de reativar PIX
 
