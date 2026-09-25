@@ -316,6 +316,11 @@ export function DepositPage() {
                 {copied ? "Código copiado" : "Copiar código PIX"}
               </button>
 
+              <button className="button full" onClick={resetDeposit}>
+                Gerar outro PIX
+                <ArrowUpRight size={18} />
+              </button>
+
               <div className="info-box">
                 <ShieldCheck size={20} />
                 <p>

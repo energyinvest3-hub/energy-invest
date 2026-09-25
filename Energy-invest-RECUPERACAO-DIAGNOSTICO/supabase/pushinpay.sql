@@ -27,32 +27,49 @@ as $$
 declare
   v_user_id uuid := (select auth.uid());
   v_deposit public.deposits%rowtype;
+  v_pending_count integer;
 begin
   if v_user_id is null then raise exception 'Authentication required'; end if;
   if p_amount is null or p_amount < 1 or p_amount > 100000 then
     raise exception 'Invalid amount';
   end if;
 
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtext(v_user_id::text)::bigint
+  );
+
   update public.deposits
-  set status = 'cancelled', provider_status = coalesce(provider_status, 'expired_local'), updated_at = now()
-  where user_id = v_user_id and provider = 'pushinpay' and status = 'pending'
+  set status = 'cancelled',
+      provider_status = coalesce(provider_status, 'expired_local'),
+      updated_at = now()
+  where user_id = v_user_id
+    and provider = 'pushinpay'
+    and status = 'pending'
     and created_at < now() - interval '30 minutes';
 
   update public.transactions
   set status = 'cancelled'
-  where user_id = v_user_id and type = 'deposit' and status = 'pending'
+  where user_id = v_user_id
+    and type = 'deposit'
+    and status = 'pending'
     and reference_id in (
       select id from public.deposits
-      where user_id = v_user_id and provider = 'pushinpay'
-        and status = 'cancelled' and provider_status = 'expired_local'
+      where user_id = v_user_id
+        and provider = 'pushinpay'
+        and status = 'cancelled'
+        and provider_status = 'expired_local'
     );
 
-  if exists (
-    select 1 from public.deposits
-    where user_id = v_user_id and provider = 'pushinpay' and status = 'pending'
-      and created_at >= now() - interval '30 minutes'
-  ) then
-    raise exception 'Você já possui um PIX aguardando pagamento.';
+  select count(*)::integer
+  into v_pending_count
+  from public.deposits
+  where user_id = v_user_id
+    and provider = 'pushinpay'
+    and status = 'pending'
+    and created_at >= now() - interval '30 minutes';
+
+  if v_pending_count >= 5 then
+    raise exception 'Você já possui 5 PIX aguardando pagamento.';
   end if;
 
   insert into public.deposits(user_id, amount, status, provider, provider_status, updated_at)
@@ -65,6 +82,7 @@ begin
   return v_deposit;
 end;
 $$;
+
 revoke all on function public.create_pushinpay_deposit(numeric) from public, anon;
 grant execute on function public.create_pushinpay_deposit(numeric) to authenticated;
 
