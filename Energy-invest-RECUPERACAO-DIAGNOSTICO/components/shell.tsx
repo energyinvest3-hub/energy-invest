@@ -218,11 +218,11 @@ function WhatsAppIcon() {
 
 function LaunchTicker() {
   const items = [
-    "PROMOÇÃO TEMPORARIA",
-    "OFERTA DE LANÇAMENTO",
-    "PLATAFORMA NOVA",
-    "NOVOS PAINÉIS DISPONÍVEIS",
-    "CONDIÇÃO ESPECIAL DE LANÇAMENTO",
+    "PROMOÇÃO DE FIM DE SEMANA",
+    "NOVA CAMPANHA A PARTIR DE R$ 100",
+    "PROGRAMAÇÃO DE 15 DIAS",
+    "CONDIÇÃO PROMOCIONAL POR TEMPO LIMITADO",
+    "CONFIRA OS DETALHES NO APP",
   ];
   const repeated = [...items, ...items];
   return (
@@ -239,28 +239,34 @@ function LaunchTicker() {
 }
 
 function LaunchWelcomeModal() {
+  const { data } = useApp();
   const [open, setOpen] = useState(false);
+  const storageKey = `energyinvest-weekend-promo-2026-09-25-v1:${data.profile.id}`;
+
   useEffect(() => {
     try {
-      if (window.localStorage.getItem("energyinvest-launch-seen-v2") !== "1") {
-        const timer = window.setTimeout(() => setOpen(true), 650);
+      if (window.localStorage.getItem(storageKey) !== "1") {
+        const timer = window.setTimeout(() => setOpen(true), 550);
         return () => window.clearTimeout(timer);
       }
     } catch {
-      // LocalStorage may be unavailable in private/restricted contexts.
+      // LocalStorage pode estar indisponível em contextos restritos.
     }
-  }, []);
+  }, [storageKey]);
+
   const close = () => {
     try {
-      window.localStorage.setItem("energyinvest-launch-seen-v2", "1");
+      window.localStorage.setItem(storageKey, "1");
     } catch {}
     setOpen(false);
   };
+
   if (!open) return null;
+
   return (
     <div className="launch-modal-backdrop" role="presentation" onMouseDown={close}>
       <section
-        className="launch-modal"
+        className="launch-modal promo-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="launch-title"
@@ -269,23 +275,54 @@ function LaunchWelcomeModal() {
         <button className="launch-modal-close" aria-label="Fechar" onClick={close}>
           <X size={20} />
         </button>
-        <div className="launch-modal-badge"><Sparkles size={16} /> NOVIDADE</div>
-        <div className="launch-modal-icon"><Sun size={34} /></div>
-        <p className="launch-modal-kicker">LANÇAMENTO ENERGYINVEST</p>
-        <h2 id="launch-title">Uma nova forma de acompanhar seus projetos solares.</h2>
+
+        <div className="launch-modal-badge">
+          <Sparkles size={16} /> PROMOÇÃO DE FIM DE SEMANA
+        </div>
+
+        <div className="launch-modal-icon">
+          <Sun size={34} />
+        </div>
+
+        <p className="launch-modal-kicker">NOVA CAMPANHA LIBERADA</p>
+        <h2 id="launch-title">Nova opção promocional com entrada de R$ 100.</h2>
+
         <p className="launch-modal-copy">
-          Explore novos projetos nacionais e internacionais, acompanhe sua carteira
-          e consulte as condições de cada participação em um só lugar.
+          Uma condição especial foi liberada para este fim de semana. A campanha
+          apresenta programação de 15 dias e valor projetado de até R$ 350,
+          conforme as condições exibidas no projeto.
         </p>
+
+        <div className="launch-promo-stats" aria-label="Resumo da promoção">
+          <div>
+            <span>ENTRADA</span>
+            <strong>R$ 100</strong>
+          </div>
+          <div>
+            <span>PROJEÇÃO</span>
+            <strong>até R$ 350*</strong>
+          </div>
+          <div>
+            <span>PERÍODO</span>
+            <strong>15 dias</strong>
+          </div>
+        </div>
+
         <div className="launch-modal-note">
           <ShieldCheck size={18} />
-          <span>Acompanhe a programação de créditos e os períodos de cada projeto no app.</span>
+          <span>
+            *Valor projetado da campanha. Consulte no projeto a programação,
+            disponibilidade e condições antes de participar. Projeções não são garantia de resultado.
+          </span>
         </div>
-        <div className="launch-modal-actions">
+
+        <div className="launch-modal-actions promo-actions">
           <Link href="/projetos" className="button primary full" onClick={close}>
-            Explorar projetos <ArrowUpRight size={18} />
+            Ver promoção <ArrowUpRight size={18} />
           </Link>
-          <button className="button outline full" onClick={close}>Continuar no app</button>
+          <Link href="/carteira/deposito" className="button outline full" onClick={close}>
+            Adicionar saldo
+          </Link>
         </div>
       </section>
     </div>
