@@ -528,15 +528,36 @@ export function AdminPage({ records }: { records: AdminData }) {
           <button
             className="button"
             disabled={busy}
-            onClick={() =>
-              adminAction(
-                {
-                  action:
-                    "reconcile_pushinpay",
-                },
-                "Conciliação da PushinPay concluída. O painel foi atualizado.",
-              )
-            }
+            onClick={async () => {
+              const result = await adminAction(
+                { action: "reconcile_pushinpay" },
+                "Conciliação da PushinPay concluída.",
+              );
+
+              if (result && typeof result === "object") {
+                const info = result as {
+                  checked?: number;
+                  credited?: number;
+                  cancelled?: number;
+                  skipped?: number;
+                  failures?: string[];
+                };
+
+                const failures = Array.isArray(info.failures)
+                  ? info.failures.filter(Boolean)
+                  : [];
+
+                setMessage(
+                  `PushinPay: ${Number(info.checked ?? 0)} consultados · ` +
+                    `${Number(info.credited ?? 0)} creditados · ` +
+                    `${Number(info.cancelled ?? 0)} cancelados · ` +
+                    `${Number(info.skipped ?? 0)} ignorados` +
+                    (failures.length
+                      ? ` · Erros: ${failures.join(" | ")}`
+                      : ""),
+                );
+              }
+            }}
           >
             <RefreshCw size={17} />{" "}
             Reconciliar PushinPay

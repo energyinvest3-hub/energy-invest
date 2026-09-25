@@ -186,6 +186,19 @@ export async function POST(request: Request) {
           if (
             settled &&
             typeof settled === "object" &&
+            (settled as { processed?: boolean }).processed === false
+          ) {
+            failures.push(
+              `${row.id}: ${String(
+                (settled as { reason?: unknown }).reason ?? "não processado",
+              )}`,
+            );
+            continue;
+          }
+
+          if (
+            settled &&
+            typeof settled === "object" &&
             (settled as { credited?: boolean }).credited
           ) credited += 1;
 
