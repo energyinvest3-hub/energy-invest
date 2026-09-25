@@ -56,9 +56,30 @@ export function AppProvider({
     const timer = setTimeout(() => setNotice(null), 5000);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  const refresh = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    };
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [refresh]);
+
   return (
     <Context.Provider
-      value={{ data: initial, toast, refresh: () => router.refresh() }}
+      value={{ data: initial, toast, refresh }}
     >
       {children}
       {notice && (

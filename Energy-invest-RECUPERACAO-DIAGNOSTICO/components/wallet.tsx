@@ -79,8 +79,22 @@ export function TransactionItem({
   );
 }
 export function WalletPage() {
-  const { data } = useApp();
+  const { data, refresh } = useApp();
   const [filter, setFilter] = useState("Todos");
+
+  useEffect(() => {
+    refresh();
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    }, 5000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [refresh]);
   const rows = data.transactions.filter(
     (t) =>
       filter === "Todos" ||
