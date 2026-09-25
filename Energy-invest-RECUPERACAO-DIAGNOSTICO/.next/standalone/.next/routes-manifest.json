@@ -1,0 +1,275 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
+      ],
+      "regex": "^(?:/(.*))(?:/)?$"
+    }
+  ],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/meus-paineis/[id]",
+      "regex": "^/meus\\-paineis/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/meus\\-paineis/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/perfil/[section]",
+      "regex": "^/perfil/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPsection": "nxtPsection"
+      },
+      "namedRegex": "^/perfil/(?<nxtPsection>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/projetos/[id]",
+      "regex": "^/projetos/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/projetos/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/api/actions",
+      "regex": "^/api/actions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/actions(?:/)?$"
+    },
+    {
+      "page": "/api/admin/manage",
+      "regex": "^/api/admin/manage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/manage(?:/)?$"
+    },
+    {
+      "page": "/api/admin/projects",
+      "regex": "^/api/admin/projects(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/projects(?:/)?$"
+    },
+    {
+      "page": "/api/admin/rewards",
+      "regex": "^/api/admin/rewards(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/rewards(?:/)?$"
+    },
+    {
+      "page": "/api/admin/withdrawals",
+      "regex": "^/api/admin/withdrawals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/withdrawals(?:/)?$"
+    },
+    {
+      "page": "/api/auth",
+      "regex": "^/api/auth(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth(?:/)?$"
+    },
+    {
+      "page": "/api/demo",
+      "regex": "^/api/demo(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/demo(?:/)?$"
+    },
+    {
+      "page": "/api/payments/perfectpay/deposit",
+      "regex": "^/api/payments/perfectpay/deposit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/payments/perfectpay/deposit(?:/)?$"
+    },
+    {
+      "page": "/api/payments/perfectpay/status",
+      "regex": "^/api/payments/perfectpay/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/payments/perfectpay/status(?:/)?$"
+    },
+    {
+      "page": "/api/webhooks/payment",
+      "regex": "^/api/webhooks/payment(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/webhooks/payment(?:/)?$"
+    },
+    {
+      "page": "/auth/callback",
+      "regex": "^/auth/callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/callback(?:/)?$"
+    },
+    {
+      "page": "/cadastro",
+      "regex": "^/cadastro(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cadastro(?:/)?$"
+    },
+    {
+      "page": "/carteira",
+      "regex": "^/carteira(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/carteira(?:/)?$"
+    },
+    {
+      "page": "/carteira/deposito",
+      "regex": "^/carteira/deposito(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/carteira/deposito(?:/)?$"
+    },
+    {
+      "page": "/carteira/saque",
+      "regex": "^/carteira/saque(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/carteira/saque(?:/)?$"
+    },
+    {
+      "page": "/energia-solar",
+      "regex": "^/energia\\-solar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/energia\\-solar(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/manifest.webmanifest",
+      "regex": "^/manifest\\.webmanifest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/manifest\\.webmanifest(?:/)?$"
+    },
+    {
+      "page": "/meus-paineis",
+      "regex": "^/meus\\-paineis(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/meus\\-paineis(?:/)?$"
+    },
+    {
+      "page": "/notificacoes",
+      "regex": "^/notificacoes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/notificacoes(?:/)?$"
+    },
+    {
+      "page": "/perfil",
+      "regex": "^/perfil(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/perfil(?:/)?$"
+    },
+    {
+      "page": "/perfil/metas",
+      "regex": "^/perfil/metas(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/perfil/metas(?:/)?$"
+    },
+    {
+      "page": "/privacidade",
+      "regex": "^/privacidade(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/privacidade(?:/)?$"
+    },
+    {
+      "page": "/projetos",
+      "regex": "^/projetos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/projetos(?:/)?$"
+    },
+    {
+      "page": "/recuperar-senha",
+      "regex": "^/recuperar\\-senha(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/recuperar\\-senha(?:/)?$"
+    },
+    {
+      "page": "/redefinir-senha",
+      "regex": "^/redefinir\\-senha(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/redefinir\\-senha(?:/)?$"
+    },
+    {
+      "page": "/termos",
+      "regex": "^/termos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/termos(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

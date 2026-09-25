@@ -1,0 +1,18 @@
+1:"$Sreact.fragment"
+2:I[7121,[],""]
+3:I[7460,["8039","static/chunks/app/error-1289d0e543cb3530.js"],"default"]
+4:I[4581,[],""]
+5:I[8500,["8500","static/chunks/8500-f4d7bfbe7500f274.js","4345","static/chunks/app/not-found-0b2741ab7ef6f6dc.js"],""]
+6:I[484,[],"OutletBoundary"]
+7:"$Sreact.suspense"
+a:I[484,[],"ViewportBoundary"]
+c:I[484,[],"MetadataBoundary"]
+e:I[7123,[],"default",1]
+:HL["/_next/static/css/4e31c6b241e04acd.css","style"]
+9:X
+0:{"P":null,"c":["","_not-found"],"q":"","i":false,"f":[[["",{"children":["_not-found",{"children":["__PAGE__",{},"$undefined","$undefined",4608]},"$undefined","$undefined",4608]},"$undefined","$undefined",4624],[["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/4e31c6b241e04acd.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"pt-BR","children":["$","body",null,{"children":["$","$L2",null,{"parallelRouterKey":"children","error":"$3","errorStyles":[],"errorScripts":null,"template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","main",null,{"className":"error-page","children":[["$","h1",null,{"children":"Este caminho ainda não recebe sol."}],["$","p",null,{"children":"A página ou o projeto não foi encontrado."}],["$","$L5",null,{"className":"button primary","href":"/","children":"Voltar ao início"}]]}],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]]}],{"children":[["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],{"children":[["$","$1","c",{"children":[["$","main",null,{"className":"error-page","children":[["$","h1",null,{"children":"Este caminho ainda não recebe sol."}],["$","p",null,{"children":"A página ou o projeto não foi encontrado."}],["$","$L5",null,{"className":"button primary","href":"/","children":"Voltar ao início"}]]}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],{},null,false,null]},null,false,"$9"]},null,false,null],["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$La",null,{"children":"$Lb"}],["$","div",null,{"hidden":true,"children":["$","$Lc",null,{"children":["$","$7",null,{"name":"Next.Metadata","children":"$Ld"}]}]}],null]}],false]],"m":"$undefined","G":["$e",[]],"S":true,"h":null,"r":"$undefined","s":"$undefined","a":"$undefined","l":"$undefined","p":"$undefined","d":"$undefined","b":"9G3FRSQ7mnDfjAm8kPgRp"}
+9:C
+b:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, viewport-fit=cover"}],["$","meta","2",{"name":"theme-color","content":"#f47724"}]]
+f:I[6869,[],"IconMark"]
+8:null
+d:[["$","title","0",{"children":"EnergyInvest | Sua energia, seu futuro"}],["$","meta","1",{"name":"description","content":"Acompanhe seus projetos de energia solar, participações e carteira."}],["$","link","2",{"rel":"manifest","href":"/manifest.webmanifest","crossOrigin":"$undefined"}],["$","meta","3",{"name":"mobile-web-app-capable","content":"yes"}],["$","meta","4",{"name":"apple-mobile-web-app-title","content":"EnergyInvest"}],["$","meta","5",{"name":"apple-mobile-web-app-status-bar-style","content":"default"}],["$","link","6",{"rel":"icon","href":"/icon.png"}],["$","link","7",{"rel":"apple-touch-icon","href":"/icon.png"}],["$","$Lf","8",{}]]

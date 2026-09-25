@@ -1,0 +1,25 @@
+1:"$Sreact.fragment"
+2:I[8500,["8500","static/chunks/8500-f4d7bfbe7500f274.js","8437","static/chunks/8437-e1cbba6829c02174.js","408","static/chunks/408-818c8c2b751d72e1.js","3315","static/chunks/3315-15aa27a6008cd257.js","1243","static/chunks/1243-0e240d4ed5ec6485.js","8831","static/chunks/app/termos/page-f106770b1b7b4097.js"],""]
+3:I[1243,["8500","static/chunks/8500-f4d7bfbe7500f274.js","8437","static/chunks/8437-e1cbba6829c02174.js","408","static/chunks/408-818c8c2b751d72e1.js","3315","static/chunks/3315-15aa27a6008cd257.js","1243","static/chunks/1243-0e240d4ed5ec6485.js","8831","static/chunks/app/termos/page-f106770b1b7b4097.js"],"LegalCopy"]
+4:I[484,[],"OutletBoundary"]
+5:"$Sreact.suspense"
+9:I[484,[],"ViewportBoundary"]
+a:I[484,[],"MetadataBoundary"]
+b:I[6869,[],"IconMark"]
+d:I[7121,[],""]
+e:I[4581,[],""]
+11:I[7460,["8039","static/chunks/app/error-1289d0e543cb3530.js"],"default"]
+:HL["/_next/static/css/4e31c6b241e04acd.css","style"]
+8:X
+10:X
+10:C
+0:{"buildId":"9G3FRSQ7mnDfjAm8kPgRp","data":[{"rsc":["$","$1","c",{"children":[["$","main",null,{"className":"public-legal","children":[["$","$L2",null,{"href":"/cadastro","children":"← Voltar"}],["$","section",null,{"className":"surface","children":["$","$L3",null,{"section":"termos"}]}]]}],null,["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"isPartial":"$@7","staleTime":"$8","varyParams":null},{"rsc":["$","$1","h",{"children":[null,["$","$L9",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, viewport-fit=cover"}],["$","meta","2",{"name":"theme-color","content":"#f47724"}]]}],["$","div",null,{"hidden":true,"children":["$","$La",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"EnergyInvest | Sua energia, seu futuro"}],["$","meta","1",{"name":"description","content":"Acompanhe seus projetos de energia solar, participações e carteira."}],["$","link","2",{"rel":"manifest","href":"/manifest.webmanifest"}],["$","meta","3",{"name":"mobile-web-app-capable","content":"yes"}],["$","meta","4",{"name":"apple-mobile-web-app-title","content":"EnergyInvest"}],["$","meta","5",{"name":"apple-mobile-web-app-status-bar-style","content":"default"}],["$","link","6",{"rel":"icon","href":"/icon.png"}],["$","link","7",{"rel":"apple-touch-icon","href":"/icon.png"}],["$","$Lb","8",{}]]}]}]}],null]}],"isPartial":"$@c","staleTime":"$8","varyParams":null},{"rsc":["$","$1","c",{"children":[null,["$","$Ld",null,{"parallelRouterKey":"children","template":["$","$Le",null,{}]}]]}],"isPartial":"$@f","staleTime":"$8","varyParams":"$10"},{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/4e31c6b241e04acd.css","precedence":"next"}]],["$","html",null,{"lang":"pt-BR","children":["$","body",null,{"children":["$","$Ld",null,{"parallelRouterKey":"children","error":"$11","errorStyles":[],"errorScripts":null,"template":["$","$Le",null,{}],"notFound":[["$","main",null,{"className":"error-page","children":[["$","h1",null,{"children":"Este caminho ainda não recebe sol."}],["$","p",null,{"children":"A página ou o projeto não foi encontrado."}],["$","$L2",null,{"className":"button primary","href":"/","children":"Voltar ao início"}]]}],[]]}]}]}]]}],"isPartial":"$@12","staleTime":"$8","varyParams":null}],"isUpgradeableISRFallback":false,"a":"$@13","rootVaryParams":null,"needsRuntimeRequest":"$@14"}
+6:null
+8:300
+14:true
+8:C
+13:0
+c:"$undefined"
+f:"$undefined"
+12:"$undefined"
+7:"$undefined"
