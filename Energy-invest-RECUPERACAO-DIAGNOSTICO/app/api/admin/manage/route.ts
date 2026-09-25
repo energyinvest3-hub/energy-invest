@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/security";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getPushinPayTransaction } from "@/lib/payments/pushinpay";
 
 const schema = z.discriminatedUnion("action", [
   z.object({
@@ -32,6 +34,7 @@ const schema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("process_credits") }),
   z.object({ action: z.literal("reconcile_syncpay") }),
+  z.object({ action: z.literal("reconcile_pushinpay") }),
 ]);
 
 function sameOrigin(request: Request) {
@@ -93,6 +96,122 @@ export async function POST(request: Request) {
       ({ data, error } = await db.rpc("admin_process_due_credits"));
     } else if (input.action === "reconcile_syncpay") {
       ({ data, error } = await db.rpc("admin_reconcile_syncpay"));
+    } else if (input.action === "reconcile_pushinpay") {
+      if (user.app_metadata.role !== "ADMIN") {
+        return Response.json(
+          { error: "Administrador necessário." },
+          { status: 403 },
+        );
+      }
+
+      const admin = supabaseAdmin();
+
+      const { data: rows, error: rowsError } = await admin
+        .from("deposits")
+        .select("id,user_id,status,provider_status,gateway_id,created_at")
+        .eq("provider", "pushinpay")
+        .in("status", ["pending", "cancelled"])
+        .not("gateway_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (rowsError) throw new Error(rowsError.message);
+
+      let checked = 0;
+      let credited = 0;
+      let cancelled = 0;
+      let skipped = 0;
+      const failures: string[] = [];
+
+      for (const row of rows ?? []) {
+        const providerStatus = String(row.provider_status ?? "").toLowerCase();
+
+        if (
+          row.status === "cancelled" &&
+          ["canceled", "cancelled", "expired"].includes(providerStatus)
+        ) {
+          skipped += 1;
+          continue;
+        }
+
+        const { data: claim, error: claimError } = await admin.rpc(
+          "claim_pushinpay_reconciliation",
+          {
+            p_deposit_id: row.id,
+            p_user_id: row.user_id,
+          },
+        );
+
+        if (claimError) {
+          failures.push(`${row.id}: ${claimError.message}`);
+          continue;
+        }
+
+        if (
+          !claim ||
+          typeof claim !== "object" ||
+          !(claim as { claimed?: boolean }).claimed
+        ) {
+          skipped += 1;
+          continue;
+        }
+
+        checked += 1;
+
+        try {
+          const transaction = await getPushinPayTransaction(
+            String((claim as { gatewayId: string }).gatewayId),
+          );
+
+          if (!transaction) {
+            failures.push(`${row.id}: transação não encontrada na PushinPay`);
+            continue;
+          }
+
+          const { data: settled, error: settleError } = await admin.rpc(
+            "settle_pushinpay_deposit",
+            {
+              p_gateway_id: transaction.id,
+              p_value_cents: transaction.value,
+              p_status: transaction.status,
+              p_end_to_end_id: transaction.end_to_end_id ?? null,
+            },
+          );
+
+          if (settleError) {
+            failures.push(`${row.id}: ${settleError.message}`);
+            continue;
+          }
+
+          if (
+            settled &&
+            typeof settled === "object" &&
+            (settled as { credited?: boolean }).credited
+          ) credited += 1;
+
+          if (
+            settled &&
+            typeof settled === "object" &&
+            (settled as { cancelled?: boolean }).cancelled
+          ) cancelled += 1;
+        } catch (providerError) {
+          failures.push(
+            `${row.id}: ${
+              providerError instanceof Error
+                ? providerError.message
+                : "erro ao consultar PushinPay"
+            }`,
+          );
+        }
+      }
+
+      data = {
+        checked,
+        credited,
+        cancelled,
+        skipped,
+        failures: failures.slice(0, 10),
+      };
     }
 
     if (error) throw new Error(error.message || "Falha na operação administrativa.");

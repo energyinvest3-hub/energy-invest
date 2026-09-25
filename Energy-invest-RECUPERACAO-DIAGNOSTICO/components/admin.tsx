@@ -532,14 +532,14 @@ export function AdminPage({ records }: { records: AdminData }) {
               adminAction(
                 {
                   action:
-                    "reconcile_syncpay",
+                    "reconcile_pushinpay",
                 },
-                "Conciliação da SyncPay iniciada.",
+                "Conciliação da PushinPay concluída. O painel foi atualizado.",
               )
             }
           >
             <RefreshCw size={17} />{" "}
-            Reconciliar SyncPay
+            Reconciliar PushinPay
           </button>
 
           <button
