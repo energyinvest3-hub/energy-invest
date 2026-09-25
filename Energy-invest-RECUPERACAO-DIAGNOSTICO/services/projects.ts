@@ -8,8 +8,10 @@ export async function performAction(body: Record<string, unknown>) {
   if (!r.ok) throw new Error(result.error ?? "Não foi possível concluir.");
   return result;
 }
+
 export const purchaseProject = (projectId: string, quantity: number) =>
   performAction({ action: "purchase", projectId, quantity, accepted: true });
+
 async function performPaymentAction(
   path: string,
   body: Record<string, unknown>,
@@ -21,20 +23,13 @@ async function performPaymentAction(
   });
   const result = await r.json();
   if (!r.ok) {
-    throw new Error(
-      result.error ?? "Não foi possível concluir o pagamento.",
-    );
+    throw new Error(result.error ?? "Não foi possível concluir o pagamento.");
   }
   return result;
 }
 
-export const createDeposit = (amount: number, cpf: string) =>
-  performPaymentAction("/api/payments/perfectpay/deposit", {
-    amount,
-    cpf,
-  });
+export const createDeposit = (amount: number) =>
+  performPaymentAction("/api/payments/pushinpay/deposit", { amount });
 
 export const getDepositStatus = (id: string) =>
-  performPaymentAction("/api/payments/perfectpay/status", {
-    id,
-  });
+  performPaymentAction("/api/payments/pushinpay/status", { id });

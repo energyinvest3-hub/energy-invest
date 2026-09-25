@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Headphones, MapPin, ShieldCheck, Sun, Zap } from "lucide-react";
 
 import { demoProjects } from "@/lib/projects";
-import { getPerfectPayCheckoutUrl } from "@/lib/payments/perfectpay";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -20,21 +19,14 @@ function money(value: number) {
   }).format(value);
 }
 
-function checkoutFor(amount: number) {
-  try {
-    return getPerfectPayCheckoutUrl(amount);
-  } catch {
-    return "/cadastro";
-  }
-}
 
 export default function EnergiaSolarPage() {
   const national = demoProjects.filter((project) => !project.international);
   const international = demoProjects.filter((project) => project.international);
 
   const renderCard = (project: (typeof demoProjects)[number]) => {
-    const href = checkoutFor(project.investmentAmount);
-    const external = href.startsWith("https://");
+    const href = "/cadastro";
+    const external = false;
 
     return (
       <article className={styles.card} key={project.id}>

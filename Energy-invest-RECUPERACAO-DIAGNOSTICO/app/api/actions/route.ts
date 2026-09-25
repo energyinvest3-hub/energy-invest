@@ -601,8 +601,8 @@ export async function POST(
      * ============================
      *
      * O frontend atual usa:
-     * /api/payments/perfectpay/deposit
-     * /api/payments/perfectpay/status
+     * /api/payments/pushinpay/deposit
+     * /api/payments/pushinpay/status
      *
      * Este bloqueio impede versões antigas do frontend de
      * executarem o fluxo legado SyncPay em produção.

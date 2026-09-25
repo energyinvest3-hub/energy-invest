@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -12,6 +13,7 @@ import {
   ChevronRight,
   Gift,
   CheckCircle2,
+  Copy
 } from "lucide-react";
 import { useApp } from "./shell";
 import { money, date } from "@/lib/format";
@@ -153,30 +155,23 @@ export function WalletPage() {
 export function DepositPage() {
   const { toast, refresh } = useApp();
   const [amount, setAmount] = useState("100");
-  const [cpf, setCpf] = useState("");
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [deposit, setDeposit] = useState<{
     id: string;
     identifier: string;
     amount: number;
     status: "pending" | "completed" | "cancelled";
     providerStatus?: string;
-    checkoutUrl?: string | null;
-    saleCode?: string | null;
+    pixCode: string;
+    qrCodeDataUrl: string;
     reversalPending?: boolean;
   } | null>(null);
 
-  const cpfDigits = cpf.replace(/\D/g, "");
-  const valid =
-    Number(amount) >= 1 &&
-    Number(amount) <= 100000 &&
-    cpfDigits.length === 11;
+  const valid = Number(amount) >= 1 && Number(amount) <= 100000;
 
   useEffect(() => {
-    const saved = window.sessionStorage.getItem(
-      "perfectpay_pending_deposit",
-    );
-
+    const saved = window.sessionStorage.getItem("pushinpay_pending_deposit");
     if (!saved || deposit) return;
 
     getDepositStatus(saved)
@@ -184,15 +179,12 @@ export function DepositPage() {
         if (result.deposit) setDeposit(result.deposit);
       })
       .catch(() => {
-        window.sessionStorage.removeItem(
-          "perfectpay_pending_deposit",
-        );
+        window.sessionStorage.removeItem("pushinpay_pending_deposit");
       });
   }, [deposit]);
 
   useEffect(() => {
     if (!deposit || deposit.status !== "pending") return;
-
     let stopped = false;
 
     const check = async () => {
@@ -208,27 +200,22 @@ export function DepositPage() {
           setDeposit(result.deposit);
 
           if (next === "completed") {
-            window.sessionStorage.removeItem(
-              "perfectpay_pending_deposit",
-            );
+            window.sessionStorage.removeItem("pushinpay_pending_deposit");
             refresh();
-            toast("Pagamento confirmado. Saldo atualizado.");
+            toast("PIX confirmado. Saldo atualizado.");
           }
 
           if (next === "cancelled") {
-            window.sessionStorage.removeItem(
-              "perfectpay_pending_deposit",
-            );
+            window.sessionStorage.removeItem("pushinpay_pending_deposit");
           }
         }
       } catch {
-        // O webhook da Perfect Pay continua sendo a fonte de verdade.
+        // O webhook da PushinPay é a fonte de verdade.
       }
     };
 
     void check();
     const timer = window.setInterval(check, 3000);
-
     return () => {
       stopped = true;
       window.clearInterval(timer);
@@ -237,31 +224,13 @@ export function DepositPage() {
 
   async function submit() {
     setBusy(true);
-
     try {
-      const result = await createDeposit(
-        Number(amount),
-        cpfDigits,
-      );
-
+      const result = await createDeposit(Number(amount));
       setDeposit(result.deposit);
-
       window.sessionStorage.setItem(
-        "perfectpay_pending_deposit",
+        "pushinpay_pending_deposit",
         result.deposit.id,
       );
-
-      const popup = window.open(
-        result.deposit.checkoutUrl,
-        "_blank",
-        "noopener,noreferrer",
-      );
-
-      if (!popup) {
-        toast(
-          "Pagamento criado. Clique em “Abrir checkout” para continuar.",
-        );
-      }
     } catch (e) {
       toast((e as Error).message, true);
     } finally {
@@ -269,19 +238,19 @@ export function DepositPage() {
     }
   }
 
-  function openCheckout() {
-    if (!deposit?.checkoutUrl) return;
-    window.open(
-      deposit.checkoutUrl,
-      "_blank",
-      "noopener,noreferrer",
-    );
+  async function copyPix() {
+    if (!deposit?.pixCode) return;
+    try {
+      await navigator.clipboard.writeText(deposit.pixCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast("Não foi possível copiar automaticamente.", true);
+    }
   }
 
   function resetDeposit() {
-    window.sessionStorage.removeItem(
-      "perfectpay_pending_deposit",
-    );
+    window.sessionStorage.removeItem("pushinpay_pending_deposit");
     setDeposit(null);
   }
 
@@ -289,7 +258,7 @@ export function DepositPage() {
     <div className="narrow">
       <PageTitle
         title="Adicionar saldo"
-        description="Finalize o pagamento pela Perfect Pay e receba o saldo automaticamente após a confirmação."
+        description="Gere um PIX e receba o saldo automaticamente após a confirmação."
         back="/carteira"
       />
 
@@ -304,17 +273,13 @@ export function DepositPage() {
           </div>
 
           <span
-            className={`pill ${
-              deposit.status === "completed"
-                ? "green"
-                : "orange"
-            }`}
+            className={`pill ${deposit.status === "completed" ? "green" : "orange"}`}
           >
             {deposit.status === "completed"
-              ? "PAGAMENTO CONFIRMADO"
+              ? "PIX CONFIRMADO"
               : deposit.status === "cancelled"
-                ? "PAGAMENTO CANCELADO"
-                : "AGUARDANDO PAGAMENTO"}
+                ? "PIX CANCELADO"
+                : "AGUARDANDO PIX"}
           </span>
 
           <h2>
@@ -322,33 +287,41 @@ export function DepositPage() {
               ? "Saldo liberado"
               : deposit.status === "cancelled"
                 ? "Essa cobrança não está mais ativa"
-                : "Finalize na Perfect Pay"}
+                : "Escaneie ou copie o código PIX"}
           </h2>
 
           <p className="pix-amount">{money(deposit.amount)}</p>
 
           {deposit.status === "pending" && (
             <>
-              <p>
-                O checkout da Perfect Pay exibirá as formas
-                disponíveis, incluindo PIX quando habilitado no plano.
-              </p>
+              {deposit.qrCodeDataUrl && (
+                <div className="pix-qr">
+                  <Image
+                    src={deposit.qrCodeDataUrl}
+                    alt="QR Code PIX"
+                    width={280}
+                    height={280}
+                    unoptimized
+                  />
+                </div>
+              )}
 
-              <button
-                className="button primary full"
-                onClick={openCheckout}
-              >
-                Abrir checkout
-                <ArrowUpRight size={18} />
+              <div className="pix-copy-box">
+                <span>PIX copia e cola</span>
+                <code>{deposit.pixCode}</code>
+              </div>
+
+              <button className="button primary full" onClick={copyPix}>
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+                {copied ? "Código copiado" : "Copiar código PIX"}
               </button>
 
               <div className="info-box">
                 <ShieldCheck size={20} />
                 <p>
-                  Use no checkout o mesmo e-mail da sua conta
-                  EnergyInvest. A confirmação chega por webhook e
-                  o saldo é liberado automaticamente, sem crédito
-                  duplicado.
+                  Não é necessário atualizar a página. A confirmação é
+                  recebida automaticamente e o saldo é atualizado sem
+                  crédito duplicado.
                 </p>
               </div>
             </>
@@ -358,25 +331,21 @@ export function DepositPage() {
             <div className="info-box">
               <ShieldCheck size={20} />
               <p>
-                Este pagamento recebeu uma atualização de
-                estorno/reembolso e está em revisão financeira.
+                Este pagamento recebeu uma atualização posterior e foi
+                sinalizado para revisão financeira.
               </p>
             </div>
           )}
 
           {deposit.status === "completed" && (
             <Link className="button primary full" href="/carteira">
-              Ver saldo atualizado
-              <ChevronRight size={18} />
+              Ver saldo atualizado <ChevronRight size={18} />
             </Link>
           )}
 
           {deposit.status === "cancelled" && (
-            <button
-              className="button primary full"
-              onClick={resetDeposit}
-            >
-              Criar novo pagamento
+            <button className="button primary full" onClick={resetDeposit}>
+              Gerar outro PIX
             </button>
           )}
 
@@ -387,13 +356,9 @@ export function DepositPage() {
           <div className="form-icon">
             <Wallet size={27} />
           </div>
-
           <h2>Quanto você quer adicionar?</h2>
-
           <p>
-            Você será levado ao checkout seguro da Perfect Pay.
-            Depois da confirmação, o saldo entra automaticamente
-            na sua conta.
+            O QR Code aparece aqui mesmo e o saldo entra após a confirmação do PIX.
           </p>
 
           <div className="quick-amounts">
@@ -408,38 +373,14 @@ export function DepositPage() {
             ))}
           </div>
 
-          <AmountInput
-            label="Valor"
-            value={amount}
-            onChange={setAmount}
-          />
-
-          <label className="field">
-            CPF do comprador
-            <input
-              inputMode="numeric"
-              autoComplete="off"
-              value={cpf}
-              onChange={(e) =>
-                setCpf(
-                  e.target.value
-                    .replace(/[^\d.-]/g, "")
-                    .slice(0, 14),
-                )
-              }
-              placeholder="000.000.000-00"
-            />
-            <span className="field-help">
-              O pagamento será conciliado com sua conta EnergyInvest
-              pelo e-mail e pelo valor confirmado pela Perfect Pay.
-            </span>
-          </label>
+          <AmountInput label="Outro valor" value={amount} onChange={setAmount} />
 
           <div className="info-box">
             <ShieldCheck size={20} />
             <p>
-              A cobrança é concluída no checkout da Perfect Pay.
-              Nenhum token ou credencial de pagamento fica no navegador.
+              O PIX é processado pela PushinPay. A EnergyInvest é responsável
+              pela oferta, suporte e cumprimento das obrigações relacionadas
+              aos produtos e serviços disponibilizados na plataforma.
             </p>
           </div>
 
@@ -449,8 +390,7 @@ export function DepositPage() {
             onClick={submit}
           >
             <Busy loading={busy}>
-              Ir para pagamento
-              <ArrowUpRight size={18} />
+              Gerar PIX <ArrowUpRight size={18} />
             </Busy>
           </button>
         </section>
