@@ -33,3 +33,6 @@ export const createDeposit = (amount: number) =>
 
 export const getDepositStatus = (id: string) =>
   performPaymentAction("/api/payments/pushinpay/status", { id });
+
+export const reconcileDeposits = () =>
+  performPaymentAction("/api/payments/pushinpay/reconcile", {});

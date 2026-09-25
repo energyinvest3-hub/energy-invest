@@ -22,6 +22,7 @@ export async function POST(request: Request) {
 
     const event = parsed.data;
     const admin = supabaseAdmin();
+
     const { data, error } = await admin.rpc("settle_pushinpay_deposit", {
       p_gateway_id: event.id,
       p_value_cents: event.value,
@@ -34,6 +35,18 @@ export async function POST(request: Request) {
       return Response.json(
         { error: "Falha temporária ao processar o pagamento." },
         { status: 503, headers: { "Retry-After": "15" } },
+      );
+    }
+
+    if (
+      data &&
+      typeof data === "object" &&
+      !(data as { processed?: boolean }).processed &&
+      (data as { reason?: string }).reason === "deposit_not_found"
+    ) {
+      return Response.json(
+        { error: "Depósito ainda não vinculado. Tente novamente." },
+        { status: 503, headers: { "Retry-After": "5" } },
       );
     }
 

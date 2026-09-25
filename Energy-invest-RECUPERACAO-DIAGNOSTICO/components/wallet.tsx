@@ -31,6 +31,7 @@ import {
   createDeposit,
   getDepositStatus,
   performAction,
+  reconcileDeposits,
 } from "@/services/projects";
 import {
   isWithdrawalWindow,
@@ -83,16 +84,38 @@ export function WalletPage() {
   const [filter, setFilter] = useState("Todos");
 
   useEffect(() => {
-    refresh();
+    let stopped = false;
 
-    const timer = window.setInterval(() => {
+    const reconcile = async () => {
+      try {
+        const result = await reconcileDeposits();
+        if (!stopped && Number(result.credited ?? 0) > 0) {
+          refresh();
+        }
+      } catch {
+        // Webhook continua sendo o caminho principal.
+      }
+    };
+
+    refresh();
+    void reconcile();
+
+    const refreshTimer = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         refresh();
       }
     }, 5000);
 
+    const reconcileTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void reconcile();
+      }
+    }, 65000);
+
     return () => {
-      window.clearInterval(timer);
+      stopped = true;
+      window.clearInterval(refreshTimer);
+      window.clearInterval(reconcileTimer);
     };
   }, [refresh]);
   const rows = data.transactions.filter(

@@ -1,10 +1,12 @@
 import { z } from "zod";
 
+import { getPushinPayTransaction } from "@/lib/payments/pushinpay";
 import {
   clientIp,
   rateLimit,
   RateLimitError,
 } from "@/lib/security";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -22,6 +24,38 @@ function sameOrigin(request: Request) {
   } catch {
     return false;
   }
+}
+
+async function readDeposit(
+  db: Awaited<ReturnType<typeof supabaseServer>>,
+  userId: string,
+  id: string,
+) {
+  const { data, error } = await db
+    .from("deposits")
+    .select(
+      "id,amount,status,gateway_id,provider_status,pix_code,qr_code_base64,paid_at,reversal_pending,provider_checked_at",
+    )
+    .eq("id", id)
+    .eq("user_id", userId)
+    .eq("provider", "pushinpay")
+    .single();
+
+  if (error || !data) return null;
+  return data;
+}
+
+function responseDeposit(deposit: Record<string, unknown>) {
+  return {
+    id: String(deposit.id),
+    identifier: String(deposit.gateway_id ?? deposit.id),
+    amount: Number(deposit.amount),
+    status: deposit.status,
+    providerStatus: deposit.provider_status,
+    pixCode: deposit.pix_code ?? "",
+    qrCodeDataUrl: deposit.qr_code_base64 ?? "",
+    reversalPending: Boolean(deposit.reversal_pending),
+  };
 }
 
 export async function POST(request: Request) {
@@ -50,35 +84,59 @@ export async function POST(request: Request) {
     });
 
     const input = schema.parse(await request.json());
+    let deposit = await readDeposit(db, user.id, input.id);
 
-    const { data: deposit, error } = await db
-      .from("deposits")
-      .select(
-        "id,amount,status,gateway_id,provider_status,pix_code,qr_code_base64,paid_at,reversal_pending",
-      )
-      .eq("id", input.id)
-      .eq("user_id", user.id)
-      .eq("provider", "pushinpay")
-      .single();
-
-    if (error || !deposit) {
+    if (!deposit) {
       return Response.json(
         { error: "Pagamento não encontrado." },
         { status: 404 },
       );
     }
 
+    if (
+      deposit.status !== "completed" &&
+      typeof deposit.gateway_id === "string" &&
+      deposit.gateway_id
+    ) {
+      const admin = supabaseAdmin();
+      const { data: claim, error: claimError } = await admin.rpc(
+        "claim_pushinpay_reconciliation",
+        {
+          p_deposit_id: input.id,
+          p_user_id: user.id,
+        },
+      );
+
+      if (claimError) {
+        console.error("PushinPay reconciliation claim error:", claimError);
+      } else if (
+        claim &&
+        typeof claim === "object" &&
+        (claim as { claimed?: boolean }).claimed
+      ) {
+        try {
+          const transaction = await getPushinPayTransaction(
+            String((claim as { gatewayId: string }).gatewayId),
+          );
+
+          if (transaction) {
+            await admin.rpc("settle_pushinpay_deposit", {
+              p_gateway_id: transaction.id,
+              p_value_cents: transaction.value,
+              p_status: transaction.status,
+              p_end_to_end_id: transaction.end_to_end_id ?? null,
+            });
+          }
+        } catch (error) {
+          console.error("PushinPay direct status fallback error:", error);
+        }
+
+        deposit = (await readDeposit(db, user.id, input.id)) ?? deposit;
+      }
+    }
+
     return Response.json({
-      deposit: {
-        id: String(deposit.id),
-        identifier: String(deposit.gateway_id ?? deposit.id),
-        amount: Number(deposit.amount),
-        status: deposit.status,
-        providerStatus: deposit.provider_status,
-        pixCode: deposit.pix_code ?? "",
-        qrCodeDataUrl: deposit.qr_code_base64 ?? "",
-        reversalPending: Boolean(deposit.reversal_pending),
-      },
+      deposit: responseDeposit(deposit as Record<string, unknown>),
     });
   } catch (error) {
     if (error instanceof RateLimitError) {

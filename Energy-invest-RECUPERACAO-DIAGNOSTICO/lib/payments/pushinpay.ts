@@ -17,6 +17,17 @@ export const pushinPayChargeSchema = z
   })
   .passthrough();
 
+export const pushinPayTransactionSchema = z
+  .object({
+    id: z.string().min(1),
+    status: z.string().min(1),
+    value: z.coerce.number().int().nonnegative(),
+    end_to_end_id: z.string().nullable().optional(),
+    payer_name: z.string().nullable().optional(),
+    payer_national_registration: z.string().nullable().optional(),
+  })
+  .passthrough();
+
 export const pushinPayWebhookSchema = z
   .object({
     id: z.string().min(1),
@@ -37,6 +48,16 @@ function safeEqual(a: string, b: string) {
   const right = Buffer.from(b, "utf8");
   if (left.length !== right.length) return false;
   return timingSafeEqual(left, right);
+}
+
+function providerError(body: unknown, status: number) {
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    const message = (body as { message?: unknown; error?: unknown }).message;
+    const fallback = (body as { error?: unknown }).error;
+    if (typeof message === "string" && message.trim()) return message;
+    if (typeof fallback === "string" && fallback.trim()) return fallback;
+  }
+  return `PushinPay retornou HTTP ${status}.`;
 }
 
 export function getPushinPayConfig() {
@@ -106,16 +127,44 @@ export async function createPushinPayCharge(
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message =
-      body && typeof body === "object" && "message" in body
-        ? String((body as { message?: unknown }).message)
-        : `PushinPay retornou HTTP ${response.status}.`;
-    throw new Error(message);
+    throw new Error(providerError(body, response.status));
   }
 
   const parsed = pushinPayChargeSchema.safeParse(body);
   if (!parsed.success) {
     throw new Error("A PushinPay retornou uma cobrança em formato inesperado.");
+  }
+
+  return parsed.data;
+}
+
+export async function getPushinPayTransaction(id: string) {
+  const { apiToken, baseUrl } = getPushinPayConfig();
+
+  const response = await fetch(
+    `${baseUrl}/transactions/${encodeURIComponent(id)}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    },
+  );
+
+  const body = await response.json().catch(() => null);
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    throw new Error(providerError(body, response.status));
+  }
+
+  const parsed = pushinPayTransactionSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new Error("A PushinPay retornou uma transação em formato inesperado.");
   }
 
   return parsed.data;
