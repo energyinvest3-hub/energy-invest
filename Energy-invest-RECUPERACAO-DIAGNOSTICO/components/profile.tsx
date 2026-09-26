@@ -527,10 +527,15 @@ function ReferralProgramFeature({ section }: { section: string }) {
       <div className="referral-program">
         <div className="referral-hero">
           <span className="pill green"><UserPlus size={14} /> PROGRAMA ATIVO</span>
-          <h2>Convide e ganhe {money(referral.rewardAmount)}</h2>
+          <h2>
+            {referral.rewardMode === "percent"
+              ? `Convide e ganhe ${referral.rewardPercent}%`
+              : `Convide e ganhe ${money(referral.rewardAmount)}`}
+          </h2>
           <p>
-            Você recebe um bônus único quando seu convidado realiza a primeira
-            compra elegível de pelo menos {money(referral.minPurchaseAmount)}.
+            {referral.rewardMode === "percent"
+              ? `Você recebe ${referral.rewardPercent}% uma única vez sobre o primeiro depósito confirmado ou a primeira compra do convidado, o que acontecer primeiro.`
+              : `Você recebe um bônus único quando seu convidado realiza a primeira compra elegível de pelo menos ${money(referral.minPurchaseAmount)}.`}
           </p>
         </div>
         <div className="referral-code-card">
@@ -599,8 +604,9 @@ function ReferralProgramFeature({ section }: { section: string }) {
         <span className="eyebrow">RECOMPENSAS</span>
         <h2>{money(referral.totalBonus)} em bônus de indicação</h2>
         <p>
-          Cada convidado pode liberar {money(referral.rewardAmount)} uma única vez
-          após a primeira compra de pelo menos {money(referral.minPurchaseAmount)}.
+          {referral.rewardMode === "percent"
+            ? `Cada convidado pode gerar uma comissão única de ${referral.rewardPercent}% sobre o primeiro depósito confirmado ou a primeira compra, o que acontecer primeiro.`
+            : `Cada convidado pode liberar ${money(referral.rewardAmount)} uma única vez após a primeira compra de pelo menos ${money(referral.minPurchaseAmount)}.`}
         </p>
       </div>
       <div className="referral-stat-grid two">

@@ -53,6 +53,7 @@ export async function getAppData(): Promise<AppData> {
       .eq("user_id", user.id)
       .order("claimed_at", { ascending: false }),
     db.rpc("get_referral_summary"),
+    db.rpc("get_special_referral_summary"),
   ]);
   const fail = results.find((r) => r.error);
   if (fail?.error)
@@ -71,8 +72,14 @@ export async function getAppData(): Promise<AppData> {
     goalDefinitions,
     rewards,
     referralRaw,
+    specialReferralRaw,
   ] = results.map((r) => r.data);
-  const referral = (referralRaw ?? {}) as Record<string, unknown>;
+  const specialReferral = specialReferralRaw as Record<string, unknown> | null;
+  const referral = (
+    specialReferral && Boolean(specialReferral.active)
+      ? specialReferral
+      : referralRaw ?? {}
+  ) as Record<string, unknown>;
   const referralMembers = Array.isArray(referral.referrals) ? referral.referrals : [];
   return {
     demo: false,
@@ -178,6 +185,8 @@ export async function getAppData(): Promise<AppData> {
       active: Boolean(referral.active),
       inviteCode: String(referral.inviteCode ?? ""),
       rewardAmount: Number(referral.rewardAmount ?? 0),
+      rewardPercent: Number(referral.rewardPercent ?? 0),
+      rewardMode: referral.rewardMode === "percent" ? "percent" : "fixed",
       minPurchaseAmount: Number(referral.minPurchaseAmount ?? 0),
       invitedCount: Number(referral.invitedCount ?? 0),
       qualifiedCount: Number(referral.qualifiedCount ?? 0),

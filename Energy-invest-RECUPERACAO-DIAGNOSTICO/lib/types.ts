@@ -91,6 +91,8 @@ export interface ReferralSummary {
   active: boolean;
   inviteCode: string;
   rewardAmount: number;
+  rewardPercent?: number;
+  rewardMode?: "fixed" | "percent";
   minPurchaseAmount: number;
   invitedCount: number;
   qualifiedCount: number;

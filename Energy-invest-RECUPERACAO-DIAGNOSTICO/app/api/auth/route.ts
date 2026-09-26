@@ -1,5 +1,6 @@
 import { authSchema } from "@/lib/validation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 import { rateLimit } from "@/lib/security";
 
@@ -58,6 +59,29 @@ export async function POST(request: Request) {
       "https://energy-invest-git-main-energy-invest.vercel.app";
 
     if (d.action === "signup") {
+      const normalizedInviteCode = d.inviteCode?.trim().toUpperCase() || "";
+      const specialInviteCode =
+        normalizedInviteCode === "JV1164778" ? normalizedInviteCode : "";
+
+      if (specialInviteCode) {
+        const admin = supabaseAdmin();
+        const { error: specialReferralError } = await admin.rpc(
+          "prepare_special_referral_signup",
+          {
+            p_email: d.email!.trim().toLowerCase(),
+            p_invite_code: specialInviteCode,
+          },
+        );
+
+        if (specialReferralError) {
+          console.error("Special referral prepare failed:", specialReferralError);
+          return Response.json(
+            { error: "Não foi possível vincular este convite agora. Tente novamente." },
+            { status: 500 },
+          );
+        }
+      }
+
       // Use the server-side registration function. It creates an already-confirmed
       // Supabase Auth user and triggers profile + wallet creation atomically.
       const register = await fetch(`${SUPABASE_URL}/functions/v1/register-user`, {
@@ -70,7 +94,10 @@ export async function POST(request: Request) {
           email: d.email,
           phone: d.phone,
           password: d.password,
-          inviteCode: d.inviteCode?.trim() || "",
+          inviteCode:
+            d.inviteCode?.trim().toUpperCase() === "JV1164778"
+              ? ""
+              : d.inviteCode?.trim() || "",
         }),
         cache: "no-store",
       });
