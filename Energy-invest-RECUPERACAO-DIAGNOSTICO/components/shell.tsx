@@ -218,11 +218,11 @@ function WhatsAppIcon() {
 
 function LaunchTicker() {
   const items = [
-    "PROMOÇÃO DE FIM DE SEMANA",
-    "NOVA CAMPANHA A PARTIR DE R$ 100",
-    "PROGRAMAÇÃO DE 15 DIAS",
+    "PROMOÇÃO ESPECIAL",
+    "SOLAR RIO RESIDENCIAL · R$ 100",
+    "SOLAR PARANÁ PRO · R$ 150",
+    "15 DIAS · 2,5X",
     "CONDIÇÃO PROMOCIONAL POR TEMPO LIMITADO",
-    "CONFIRA OS DETALHES NO APP",
   ];
   const repeated = [...items, ...items];
   return (
@@ -241,13 +241,20 @@ function LaunchTicker() {
 function LaunchWelcomeModal() {
   const { data } = useApp();
   const [open, setOpen] = useState(false);
-  const storageKey = `energyinvest-weekend-promo-2026-09-25-v1:${data.profile.id}`;
+
+  // v2 força a nova campanha a aparecer uma única vez após esta atualização.
+  const storageKey = `energyinvest-promo-100-150-2026-09-v2:${data.profile.id}`;
 
   useEffect(() => {
     try {
       if (window.localStorage.getItem(storageKey) !== "1") {
-        const timer = window.setTimeout(() => setOpen(true), 550);
-        return () => window.clearTimeout(timer);
+        const timer = window.setTimeout(
+          () => setOpen(true),
+          500,
+        );
+
+        return () =>
+          window.clearTimeout(timer);
       }
     } catch {
       // LocalStorage pode estar indisponível em contextos restritos.
@@ -256,73 +263,165 @@ function LaunchWelcomeModal() {
 
   const close = () => {
     try {
-      window.localStorage.setItem(storageKey, "1");
+      window.localStorage.setItem(
+        storageKey,
+        "1",
+      );
     } catch {}
+
     setOpen(false);
   };
 
   if (!open) return null;
 
   return (
-    <div className="launch-modal-backdrop" role="presentation" onMouseDown={close}>
+    <div
+      className="launch-modal-backdrop promo-v2-backdrop"
+      role="presentation"
+      onMouseDown={close}
+    >
       <section
-        className="launch-modal promo-modal"
+        className="promo-v2"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="launch-title"
-        onMouseDown={(event) => event.stopPropagation()}
+        aria-labelledby="promo-v2-title"
+        onMouseDown={(event) =>
+          event.stopPropagation()
+        }
       >
-        <button className="launch-modal-close" aria-label="Fechar" onClick={close}>
+        <button
+          className="promo-v2-close"
+          aria-label="Fechar promoção"
+          onClick={close}
+        >
           <X size={20} />
         </button>
 
-        <div className="launch-modal-badge">
-          <Sparkles size={16} /> PROMOÇÃO DE FIM DE SEMANA
-        </div>
-
-        <div className="launch-modal-icon">
-          <Sun size={34} />
-        </div>
-
-        <p className="launch-modal-kicker">NOVA CAMPANHA LIBERADA</p>
-        <h2 id="launch-title">Nova opção promocional com entrada de R$ 100.</h2>
-
-        <p className="launch-modal-copy">
-          Uma condição especial foi liberada para este fim de semana. A campanha
-          apresenta programação de 15 dias e valor projetado de até R$ 350,
-          conforme as condições exibidas no projeto.
-        </p>
-
-        <div className="launch-promo-stats" aria-label="Resumo da promoção">
-          <div>
-            <span>ENTRADA</span>
-            <strong>R$ 100</strong>
+        <div className="promo-v2-content">
+          <div className="promo-v2-badge">
+            <Sparkles size={15} />
+            PROMOÇÃO ESPECIAL
           </div>
-          <div>
-            <span>PROJEÇÃO</span>
-            <strong>até R$ 350*</strong>
+
+          <p className="promo-v2-kicker">
+            NOVOS PREÇOS LIBERADOS
+          </p>
+
+          <h2 id="promo-v2-title">
+            Dois painéis entraram em{" "}
+            <span>promoção.</span>
+          </h2>
+
+          <p className="promo-v2-copy">
+            Aproveite os novos valores promocionais
+            e confira duas opções selecionadas com
+            condições especiais por tempo limitado.
+          </p>
+
+          <div
+            className="promo-v2-offers"
+            aria-label="Painéis em promoção"
+          >
+            <article className="promo-v2-offer">
+              <div className="promo-v2-offer-image">
+                <Image
+                  src="/solar-3.jpg"
+                  alt="Painéis solares do Solar Rio Residencial"
+                  fill
+                  sizes="180px"
+                />
+                <span>PREÇO PROMOCIONAL</span>
+              </div>
+
+              <div className="promo-v2-offer-body">
+                <small>Solar Rio Residencial</small>
+                <strong>R$ 100,00</strong>
+
+                <div>
+                  <span>15 dias</span>
+                  <i />
+                  <span>2,5x</span>
+                </div>
+              </div>
+            </article>
+
+            <article className="promo-v2-offer">
+              <div className="promo-v2-offer-image">
+                <Image
+                  src="/solar-8.png"
+                  alt="Painéis solares do Solar Paraná Pro"
+                  fill
+                  sizes="180px"
+                />
+                <span>PREÇO PROMOCIONAL</span>
+              </div>
+
+              <div className="promo-v2-offer-body">
+                <small>Solar Paraná Pro</small>
+                <strong>R$ 150,00</strong>
+
+                <div>
+                  <span>15 dias</span>
+                  <i />
+                  <span>2,5x</span>
+                </div>
+              </div>
+            </article>
           </div>
-          <div>
-            <span>PERÍODO</span>
-            <strong>15 dias</strong>
+
+          <div className="promo-v2-note">
+            <ShieldCheck size={18} />
+            <span>
+              Oferta promocional por tempo limitado.
+              Consulte disponibilidade e detalhes de
+              cada projeto antes de participar.
+              Projeções não são garantia de resultado.
+            </span>
+          </div>
+
+          <div className="promo-v2-actions">
+            <Link
+              href="/projetos"
+              className="button primary"
+              onClick={close}
+            >
+              Quero aproveitar
+              <ArrowUpRight size={18} />
+            </Link>
+
+            <Link
+              href="/carteira/deposito"
+              className="button outline"
+              onClick={close}
+            >
+              Adicionar saldo
+            </Link>
           </div>
         </div>
 
-        <div className="launch-modal-note">
-          <ShieldCheck size={18} />
-          <span>
-            *Valor projetado da campanha. Consulte no projeto a programação,
-            disponibilidade e condições antes de participar. Projeções não são garantia de resultado.
-          </span>
-        </div>
+        <div
+          className="promo-v2-hero"
+          aria-hidden="true"
+        >
+          <Image
+            src="/solar-8.png"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 420px"
+          />
 
-        <div className="launch-modal-actions promo-actions">
-          <Link href="/projetos" className="button primary full" onClick={close}>
-            Ver promoção <ArrowUpRight size={18} />
-          </Link>
-          <Link href="/carteira/deposito" className="button outline full" onClick={close}>
-            Adicionar saldo
-          </Link>
+          <div className="promo-v2-hero-shade" />
+
+          <div className="promo-v2-hero-copy">
+            <span>ENERGYINVEST</span>
+            <strong>
+              Energia que transforma possibilidades.
+            </strong>
+            <small>
+              Condições especiais disponíveis agora.
+            </small>
+          </div>
         </div>
       </section>
     </div>
