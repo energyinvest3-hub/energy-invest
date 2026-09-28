@@ -122,8 +122,8 @@ grant update(name,phone,avatar_url) on public.profiles to authenticated;
 grant update(read) on public.notifications to authenticated;
 grant insert(user_id,task_key) on public.user_tasks to authenticated;
 grant insert(admin_user_id,action,target_type,target_id,metadata) on public.admin_audit_logs to authenticated;
-grant insert(name,description,image_url,state,city,investment_amount,daily_projected_return,duration_days,available_units,max_units_per_user,status,start_date,end_date) on public.solar_projects to authenticated;
-grant update(name,description,image_url,state,city,investment_amount,daily_projected_return,duration_days,available_units,max_units_per_user,status,start_date,end_date) on public.solar_projects to authenticated;
+grant insert(name,description,image_url,state,city,investment_amount,daily_projected_return,duration_days,available_units,max_units_per_user,status,start_date,end_date,return_multiplier) on public.solar_projects to authenticated;
+grant update(name,description,image_url,state,city,investment_amount,daily_projected_return,duration_days,available_units,max_units_per_user,status,start_date,end_date,return_multiplier) on public.solar_projects to authenticated;
 
 create policy profile_read on public.profiles for select to authenticated using(id=(select auth.uid()) or (select private.is_admin()));
 create policy profile_edit on public.profiles for update to authenticated using(id=(select auth.uid())) with check(id=(select auth.uid()));

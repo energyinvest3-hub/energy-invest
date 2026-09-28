@@ -6,6 +6,14 @@ alter table public.solar_projects
   add column if not exists return_multiplier numeric(6,2) not null default 1.00
   check (return_multiplier >= 1 and return_multiplier <= 5);
 
+grant insert (return_multiplier)
+on public.solar_projects
+to authenticated;
+
+grant update (return_multiplier)
+on public.solar_projects
+to authenticated;
+
 create table if not exists public.project_distributions (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.solar_projects(id) on delete cascade,
