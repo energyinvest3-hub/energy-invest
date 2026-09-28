@@ -29,6 +29,7 @@ import {
 import { projectSchema } from "@/lib/validation";
 import { money, date } from "@/lib/format";
 import { Busy, EmptyState, Modal, PageTitle } from "./ui";
+import { AdminPayoutControls, AuthorizeAutomaticWithdrawalButton } from "./admin-payout-controls";
 
 type ProjectInput = z.infer<typeof projectSchema>;
 type Row = Record<string, unknown>;
@@ -167,10 +168,6 @@ export function AdminPage({ records }: { records: AdminData }) {
 
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [manualWithdrawal, setManualWithdrawal] = useState<Row | null>(null);
-  const [manualPixKey, setManualPixKey] = useState("");
-  const [manualPixType, setManualPixType] = useState("chave");
-  const [manualAmount, setManualAmount] = useState("");
 
   const profiles = records.profiles ?? [];
   const wallets = records.wallets ?? [];
@@ -353,22 +350,6 @@ export function AdminPage({ records }: { records: AdminData }) {
         ? "Usuário reativado."
         : "Usuário bloqueado.",
     );
-  }
-
-  function openManualWithdrawal(row: Row) {
-    setManualWithdrawal(row);
-    setManualPixKey(String(row.pix_key ?? ""));
-    setManualPixType(String(row.pix_key_type ?? "chave"));
-    setManualAmount(String(row.net_amount ?? row.amount ?? ""));
-  }
-
-  async function copyManualPix(value: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      setMessage(`${label} copiado.`);
-    } catch {
-      setMessage(`Não foi possível copiar ${label.toLowerCase()}.`);
-    }
   }
 
   async function updateWithdrawal(
@@ -603,6 +584,8 @@ export function AdminPage({ records }: { records: AdminData }) {
           </button>
         </div>
       </section>
+
+      <AdminPayoutControls />
 
       <div className="filter-scroll admin-module-tabs">
         {tabs.map((name) => (
@@ -950,7 +933,12 @@ export function AdminPage({ records }: { records: AdminData }) {
                                     <button
                                       className="button small primary"
                                       onClick={() =>
-                                        openManualWithdrawal(row)
+                                        updateWithdrawal(
+                                          String(
+                                            row.id,
+                                          ),
+                                          "complete",
+                                        )
                                       }
                                     >
                                       <Check
@@ -958,8 +946,17 @@ export function AdminPage({ records }: { records: AdminData }) {
                                           15
                                         }
                                       />{" "}
-                                      Enviar PIX manual
+                                      Concluir
                                     </button>
+
+                                    <AuthorizeAutomaticWithdrawalButton
+                                      withdrawalId={String(
+                                        row.id,
+                                      )}
+                                      alreadyAuthorized={Boolean(
+                                        row.auto_authorized_at,
+                                      )}
+                                    />
 
                                     <button
                                       className="button small"
@@ -1002,106 +999,6 @@ export function AdminPage({ records }: { records: AdminData }) {
             </div>
           )}
         </section>
-      )}
-
-      {manualWithdrawal && (
-        <Modal
-          title="Enviar PIX manual"
-          onClose={() => setManualWithdrawal(null)}
-        >
-          <div className="legal-copy">
-            <p>
-              Confira os dados abaixo, faça o PIX manualmente no seu banco/app
-              e só depois marque o saque como enviado.
-            </p>
-          </div>
-
-          <dl className="detail-list">
-            <div>
-              <dt>Cliente</dt>
-              <dd>{String(
-                manualWithdrawal.user_name ||
-                manualWithdrawal.user_email ||
-                manualWithdrawal.user_id ||
-                "—"
-              )}</dd>
-            </div>
-            <div>
-              <dt>Valor</dt>
-              <dd>{money(Number(manualAmount || 0))}</dd>
-            </div>
-            <div>
-              <dt>Tipo de chave</dt>
-              <dd>{manualPixType.toUpperCase()}</dd>
-            </div>
-            <div>
-              <dt>Chave PIX</dt>
-              <dd style={{ overflowWrap: "anywhere" }}>{manualPixKey || "—"}</dd>
-            </div>
-          </dl>
-
-          <div className="table-actions">
-            <button
-              type="button"
-              className="button"
-              onClick={() => copyManualPix(manualPixKey, "Chave PIX")}
-              disabled={!manualPixKey}
-            >
-              Copiar chave PIX
-            </button>
-
-            <button
-              type="button"
-              className="button"
-              onClick={() =>
-                copyManualPix(
-                  Number(manualAmount || 0).toFixed(2).replace(".", ","),
-                  "Valor",
-                )
-              }
-            >
-              Copiar valor
-            </button>
-          </div>
-
-          <div className="info-box" style={{ marginTop: 16 }}>
-            <ShieldCheck size={19} />
-            <p>
-              Este botão não envia dinheiro pela PushinPay. Faça a transferência
-              manualmente e confirme abaixo somente depois de conferir o comprovante.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="button primary full"
-            disabled={busy}
-            onClick={async () => {
-              const ok = window.confirm(
-                "Confirma que o PIX já foi enviado para esta chave? Essa ação concluirá o saque no sistema.",
-              );
-              if (!ok) return;
-
-              await updateWithdrawal(
-                String(manualWithdrawal.id),
-                "complete",
-              );
-              setManualWithdrawal(null);
-            }}
-          >
-            <Check size={18} />
-            Já enviei o PIX · concluir saque
-          </button>
-
-          <button
-            type="button"
-            className="button outline full"
-            disabled={busy}
-            onClick={() => setManualWithdrawal(null)}
-          >
-            Voltar sem concluir
-          </button>
-        </Modal>
       )}
 
       {editingProject && (
