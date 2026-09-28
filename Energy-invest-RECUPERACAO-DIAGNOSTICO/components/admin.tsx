@@ -585,7 +585,6 @@ export function AdminPage({ records }: { records: AdminData }) {
         </div>
       </section>
 
-      <AdminPayoutControls />
 
       <div className="filter-scroll admin-module-tabs">
         {tabs.map((name) => (
@@ -616,21 +615,25 @@ export function AdminPage({ records }: { records: AdminData }) {
       )}
 
       {tab === "Configurações" ? (
-        <SettingsPanel
-          row={
-            (
-              records.referral_program_settings ??
-              []
-            )[0]
-          }
-          disabled={busy}
-          onSave={(payload) =>
-            adminAction(
-              payload,
-              "Configurações atualizadas.",
-            )
-          }
-        />
+        <>
+          <AdminPayoutControls />
+
+          <SettingsPanel
+            row={
+              (
+                records.referral_program_settings ??
+                []
+              )[0]
+            }
+            disabled={busy}
+            onSave={(payload) =>
+              adminAction(
+                payload,
+                "Configurações atualizadas.",
+              )
+            }
+          />
+        </>
       ) : (
         <section className="surface">
           <div className="admin-table-header">
