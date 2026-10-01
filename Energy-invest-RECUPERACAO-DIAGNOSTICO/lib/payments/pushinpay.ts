@@ -174,7 +174,7 @@ export async function getPushinPayTransaction(id: string) {
   const { apiToken, baseUrl } = getPushinPayConfig();
 
   const response = await fetch(
-    `${baseUrl}/transaction/${encodeURIComponent(id)}`,
+    `${baseUrl}/transactions/${encodeURIComponent(id)}`,
     {
       method: "GET",
       headers: {
@@ -228,6 +228,9 @@ export async function createPushinPayCashOut(input: {
     pix_key_type: pushinPayPixKeyType(input.pixKeyType),
     pix_key: pixKey,
     webhook_url: input.webhookUrl,
+    device: Number(
+      process.env.PUSHINPAY_DEVICE_ID?.trim() || "1",
+    ),
   };
 
   if (input.pixKeyType === "cpf") {

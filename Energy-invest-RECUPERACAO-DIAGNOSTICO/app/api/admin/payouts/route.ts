@@ -33,6 +33,60 @@ function sameOrigin(request: Request) {
   }
 }
 
+function errorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+
+    for (const key of ["message", "error", "details", "hint"]) {
+      if (
+        typeof value[key] === "string" &&
+        String(value[key]).trim()
+      ) {
+        return String(value[key]).trim();
+      }
+    }
+  }
+
+  return "Não foi possível concluir.";
+}
+
+async function loadSettings() {
+  const admin = supabaseAdmin();
+
+  let { data, error } = await admin
+    .from("withdrawal_control_settings")
+    .select("*")
+    .eq("id", true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+
+  if (!data) {
+    const created = await admin
+      .from("withdrawal_control_settings")
+      .upsert(
+        {
+          id: true,
+          automatic_processing_enabled: false,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" },
+      )
+      .select("*")
+      .single();
+
+    if (created.error) {
+      throw new Error(created.error.message);
+    }
+
+    data = created.data;
+  }
+
+  return data;
+}
+
 export async function POST(request: Request) {
   try {
     if (!sameOrigin(request)) {
@@ -61,100 +115,154 @@ export async function POST(request: Request) {
       windowSeconds: 60,
     });
 
+    const admin = supabaseAdmin();
+
     if (input.action === "load") {
-      const admin = supabaseAdmin();
-
-      const { data, error } = await admin
-        .from("withdrawal_control_settings")
-        .select("*")
-        .eq("id", true)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      return Response.json({
-        settings:
-          data ?? {
-            automatic_processing_enabled: false,
-          },
-      });
+      const settings = await loadSettings();
+      return Response.json({ settings });
     }
 
     if (input.action === "set_auto") {
-      const { data, error } = await db.rpc(
-        "admin_set_automatic_withdrawals",
-        { p_enabled: input.enabled },
-      );
+      const { data, error } = await admin
+        .from("withdrawal_control_settings")
+        .upsert(
+          {
+            id: true,
+            automatic_processing_enabled: input.enabled,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "id" },
+        )
+        .select("*")
+        .single();
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
 
-      return Response.json({ ok: true, data });
-    }
-
-    const admin = supabaseAdmin();
-
-    const { data: withdrawal, error: claimError } = await db.rpc(
-      "admin_claim_withdrawal_cashout",
-      {
-        p_withdrawal_id: input.withdrawalId,
-      },
-    );
-
-    if (claimError) throw claimError;
-    if (!withdrawal) throw new Error("Saque não encontrado.");
-
-    const row = withdrawal as Record<string, unknown>;
-    const netAmount = Number(row.net_amount ?? row.amount ?? 0);
-
-    if (!Number.isFinite(netAmount) || netAmount <= 0) {
-      throw new Error("Valor líquido do saque inválido.");
-    }
-
-    const valueCents = Math.round(netAmount * 100);
-
-    try {
-      const cashout = await createPushinPayCashOut({
-        valueCents,
-        pixKeyType: String(row.pix_key_type) as
-          | "cpf"
-          | "email"
-          | "phone"
-          | "random",
-        pixKey: String(row.pix_key),
-        webhookUrl: pushinPayWebhookUrl(request),
+      await admin.from("admin_audit_logs").insert({
+        admin_user_id: user.id,
+        action: "set_automatic_withdrawals",
+        target_type: "withdrawal_settings",
+        metadata: {
+          enabled: input.enabled,
+          source: "admin_payouts_api",
+        },
       });
 
-      const { data: attached, error: attachError } = await admin.rpc(
-        "attach_pushinpay_cashout",
+      return Response.json({
+        ok: true,
+        settings: data,
+      });
+    }
+
+    const settings = await loadSettings();
+
+    if (!settings.automatic_processing_enabled) {
+      throw new Error(
+        "O PIX CashOut está desativado. Ative e salve em Configurações antes de enviar.",
+      );
+    }
+
+    const { data: withdrawal, error: claimError } =
+      await admin.rpc(
+        "service_claim_pushinpay_cashout",
         {
           p_withdrawal_id: input.withdrawalId,
-          p_cashout_id: cashout.id,
-          p_value_cents: cashout.value,
-          p_status: cashout.status,
-          p_end_to_end_id: cashout.end_to_end_id ?? null,
+          p_admin_user_id: user.id,
         },
       );
 
-      if (attachError) throw attachError;
+    if (claimError) {
+      throw new Error(claimError.message);
+    }
 
-      const normalized = cashout.status.toLowerCase();
+    if (!withdrawal) {
+      throw new Error("Saque não encontrado.");
+    }
+
+    const row = withdrawal as Record<string, unknown>;
+    const netAmount = Number(
+      row.net_amount ?? row.amount ?? 0,
+    );
+
+    if (
+      !Number.isFinite(netAmount) ||
+      netAmount <= 0
+    ) {
+      throw new Error(
+        "Valor líquido do saque inválido.",
+      );
+    }
+
+    const valueCents = Math.round(
+      netAmount * 100,
+    );
+
+    try {
+      const cashout =
+        await createPushinPayCashOut({
+          valueCents,
+          pixKeyType: String(
+            row.pix_key_type,
+          ) as
+            | "cpf"
+            | "email"
+            | "phone"
+            | "random",
+          pixKey: String(row.pix_key),
+          webhookUrl:
+            pushinPayWebhookUrl(request),
+        });
+
+      const {
+        data: attached,
+        error: attachError,
+      } = await admin.rpc(
+        "attach_pushinpay_cashout",
+        {
+          p_withdrawal_id:
+            input.withdrawalId,
+          p_cashout_id: cashout.id,
+          p_value_cents: cashout.value,
+          p_status: cashout.status,
+          p_end_to_end_id:
+            cashout.end_to_end_id ??
+            null,
+        },
+      );
+
+      if (attachError) {
+        throw new Error(
+          attachError.message,
+        );
+      }
+
+      const normalized =
+        cashout.status.toLowerCase();
 
       if (
         normalized === "paid" ||
         normalized === "canceled" ||
         normalized === "cancelled"
       ) {
-        const { error: settleError } = await admin.rpc(
-          "settle_pushinpay_withdrawal",
-          {
-            p_cashout_id: cashout.id,
-            p_value_cents: cashout.value,
-            p_status: cashout.status,
-            p_end_to_end_id: cashout.end_to_end_id ?? null,
-          },
-        );
+        const { error: settleError } =
+          await admin.rpc(
+            "settle_pushinpay_withdrawal",
+            {
+              p_cashout_id: cashout.id,
+              p_value_cents:
+                cashout.value,
+              p_status: cashout.status,
+              p_end_to_end_id:
+                cashout.end_to_end_id ??
+                null,
+            },
+          );
 
-        if (settleError) throw settleError;
+        if (settleError) {
+          throw new Error(
+            settleError.message,
+          );
+        }
       }
 
       return Response.json({
@@ -164,7 +272,9 @@ export async function POST(request: Request) {
           id: cashout.id,
           status: cashout.status,
           value: cashout.value,
-          receiverName: cashout.receiver_name ?? null,
+          receiverName:
+            cashout.receiver_name ??
+            null,
         },
         message:
           normalized === "paid"
@@ -173,18 +283,23 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       const retrySafe =
-        error instanceof PushinPayCashOutError
+        error instanceof
+        PushinPayCashOutError
           ? error.retrySafe
           : false;
 
       await admin
         .from("withdrawals")
         .update({
-          cashout_status: retrySafe ? "failed" : "review",
+          cashout_status:
+            retrySafe
+              ? "failed"
+              : "review",
           cashout_error:
-            error instanceof Error
-              ? error.message.slice(0, 500)
-              : "Falha desconhecida no envio.",
+            errorMessage(error).slice(
+              0,
+              500,
+            ),
         })
         .eq("id", input.withdrawalId)
         .eq("status", "pending");
@@ -194,12 +309,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return Response.json(
       {
-        error:
-          error instanceof z.ZodError
-            ? error.issues[0]?.message ?? "Dados inválidos."
-            : error instanceof Error
-              ? error.message
-              : "Não foi possível concluir.",
+        error: errorMessage(error),
       },
       { status: 400 },
     );
