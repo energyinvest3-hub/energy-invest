@@ -28,6 +28,69 @@ export async function POST(request: Request) {
 
     const event = parsed.data;
     const admin = supabaseAdmin();
+    const normalized = event.status.toLowerCase();
+
+    const { data: manualPayout, error: manualLookupError } =
+      await admin
+        .from("manual_pix_payouts")
+        .select("id,status")
+        .eq("cashout_id", event.id)
+        .maybeSingle();
+
+    if (manualLookupError) {
+      console.error(
+        "PushinPay manual payout lookup error:",
+        manualLookupError,
+      );
+
+      return Response.json(
+        { error: "Falha temporária ao processar o PIX manual." },
+        {
+          status: 503,
+          headers: { "Retry-After": "15" },
+        },
+      );
+    }
+
+    if (manualPayout) {
+      const update: Record<string, unknown> = {
+        status: normalized,
+        provider_status: normalized,
+        end_to_end_id: event.end_to_end_id ?? null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (normalized === "paid") {
+        update.paid_at = new Date().toISOString();
+      }
+
+      const { error: manualUpdateError } =
+        await admin
+          .from("manual_pix_payouts")
+          .update(update)
+          .eq("id", manualPayout.id);
+
+      if (manualUpdateError) {
+        console.error(
+          "PushinPay manual payout update error:",
+          manualUpdateError,
+        );
+
+        return Response.json(
+          { error: "Falha temporária ao atualizar o PIX manual." },
+          {
+            status: 503,
+            headers: { "Retry-After": "15" },
+          },
+        );
+      }
+
+      return Response.json({
+        received: true,
+        kind: "manual_cashout",
+        status: normalized,
+      });
+    }
 
     const {
       data: withdrawalData,

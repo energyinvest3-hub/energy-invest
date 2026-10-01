@@ -29,7 +29,11 @@ import {
 import { projectSchema } from "@/lib/validation";
 import { money, date } from "@/lib/format";
 import { Busy, EmptyState, Modal, PageTitle } from "./ui";
-import { AdminPayoutControls, AuthorizeAutomaticWithdrawalButton } from "./admin-payout-controls";
+import {
+  AdminPayoutControls,
+  AuthorizeAutomaticWithdrawalButton,
+  ManualPixPayoutForm,
+} from "./admin-payout-controls";
 
 type ProjectInput = z.infer<typeof projectSchema>;
 type Row = Record<string, unknown>;
@@ -1035,6 +1039,10 @@ export function AdminPage({ records }: { records: AdminData }) {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {tab === "Saques" && (
+            <ManualPixPayoutForm />
           )}
         </section>
       )}
