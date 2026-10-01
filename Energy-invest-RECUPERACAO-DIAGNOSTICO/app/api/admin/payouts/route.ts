@@ -329,12 +329,8 @@ export async function POST(request: Request) {
     try {
       const cashout = await createPushinPayCashOut({
         valueCents,
-        pixKeyType: String(row.pix_key_type) as
-          | "cpf"
-          | "email"
-          | "phone"
-          | "random",
-        pixKey: String(row.pix_key),
+        pixKeyType: String(row.pix_key_type ?? ""),
+        pixKey: String(row.pix_key ?? ""),
         webhookUrl: pushinPayWebhookUrl(request),
       });
 

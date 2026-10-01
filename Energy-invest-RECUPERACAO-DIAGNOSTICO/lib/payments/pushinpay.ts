@@ -202,39 +202,133 @@ export async function getPushinPayTransaction(id: string) {
   return parsed.data;
 }
 
-function pushinPayPixKeyType(
-  type: "cpf" | "email" | "phone" | "random",
-) {
-  if (type === "cpf") return "national_registration";
-  if (type === "random") return "evp";
-  return type;
+type PushinPayPixKeyType =
+  | "national_registration"
+  | "email"
+  | "phone"
+  | "evp";
+
+function normalizePushinPayPixKey(
+  rawType: string,
+  rawKey: string,
+): {
+  providerType: PushinPayPixKeyType;
+  pixKey: string;
+  receiverNationalRegistration?: string;
+} {
+  const type = rawType.trim().toLowerCase();
+  const key = rawKey.trim();
+  const digits = key.replace(/\D/g, "");
+
+  if (
+    ["cpf", "cnpj", "national_registration", "document", "taxid"].includes(
+      type,
+    )
+  ) {
+    if (digits.length !== 11 && digits.length !== 14) {
+      throw new Error(
+        "A chave PIX de CPF/CNPJ precisa ter 11 ou 14 dígitos.",
+      );
+    }
+
+    return {
+      providerType: "national_registration",
+      pixKey: digits,
+      receiverNationalRegistration: digits,
+    };
+  }
+
+  if (type === "email") {
+    return {
+      providerType: "email",
+      pixKey: key.toLowerCase(),
+    };
+  }
+
+  if (
+    ["phone", "telefone", "celular"].includes(type)
+  ) {
+    return {
+      providerType: "phone",
+      pixKey: key.replace(/[^\d+]/g, ""),
+    };
+  }
+
+  if (
+    ["random", "evp", "aleatoria", "aleatória"].includes(type)
+  ) {
+    return {
+      providerType: "evp",
+      pixKey: key.toLowerCase(),
+    };
+  }
+
+  // Fallback para registros antigos cujo tipo ficou vazio ou inconsistente.
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) {
+    return {
+      providerType: "email",
+      pixKey: key.toLowerCase(),
+    };
+  }
+
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      key,
+    )
+  ) {
+    return {
+      providerType: "evp",
+      pixKey: key.toLowerCase(),
+    };
+  }
+
+  if (digits.length === 11 || digits.length === 14) {
+    return {
+      providerType: "national_registration",
+      pixKey: digits,
+      receiverNationalRegistration: digits,
+    };
+  }
+
+  const phone = key.replace(/[^\d+]/g, "");
+  if (/^\+?55\d{10,11}$/.test(phone)) {
+    return {
+      providerType: "phone",
+      pixKey: phone,
+    };
+  }
+
+  throw new Error(
+    `Tipo de chave PIX não reconhecido no cadastro: ${rawType || "vazio"}.`,
+  );
 }
 
 export async function createPushinPayCashOut(input: {
   valueCents: number;
-  pixKeyType: "cpf" | "email" | "phone" | "random";
+  pixKeyType: string;
   pixKey: string;
   webhookUrl: string;
 }) {
   const { apiToken, baseUrl } = getPushinPayConfig();
 
-  const pixKey =
-    input.pixKeyType === "cpf"
-      ? input.pixKey.replace(/\D/g, "")
-      : input.pixKey.trim();
+  const normalizedPix = normalizePushinPayPixKey(
+    input.pixKeyType,
+    input.pixKey,
+  );
 
   const body: Record<string, unknown> = {
     value: input.valueCents,
-    pix_key_type: pushinPayPixKeyType(input.pixKeyType),
-    pix_key: pixKey,
+    pix_key_type: normalizedPix.providerType,
+    pix_key: normalizedPix.pixKey,
     webhook_url: input.webhookUrl,
     device: Number(
       process.env.PUSHINPAY_DEVICE_ID?.trim() || "1",
     ),
   };
 
-  if (input.pixKeyType === "cpf") {
-    body.receiver_national_registration = pixKey;
+  if (normalizedPix.receiverNationalRegistration) {
+    body.receiver_national_registration =
+      normalizedPix.receiverNationalRegistration;
   }
 
   let response: Response;
