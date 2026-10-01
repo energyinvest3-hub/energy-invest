@@ -1,4 +1,4 @@
--- EnergyInvest — saque mínimo R$50 + PushinPay PIX CashOut
+-- EnergyInvest — PushinPay PIX CashOut
 -- Preserva a regra já existente: 1 saque por dia.
 -- O envio só ocorre após autorização individual do ADMIN.
 begin;
@@ -41,10 +41,6 @@ security definer
 set search_path = ''
 as $$
 begin
-  if new.amount < 50 then
-    raise exception 'O valor mínimo para saque é R$ 50,00.';
-  end if;
-
   if new.fee_amount is null then
     new.fee_amount := round(new.amount * 0.05, 2);
   end if;
@@ -110,10 +106,6 @@ begin
 
   if v_row.status <> 'pending' then
     raise exception 'Este saque não está pendente.';
-  end if;
-
-  if v_row.amount < 50 then
-    raise exception 'O valor mínimo para saque é R$ 50,00.';
   end if;
 
   if v_row.cashout_id is not null then

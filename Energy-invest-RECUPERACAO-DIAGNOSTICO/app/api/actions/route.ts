@@ -41,7 +41,7 @@ const schema = z.discriminatedUnion("action", [
 
   z.object({
     action: z.literal("withdrawal"),
-    amount: z.number().min(1).max(100000),
+    amount: z.number().min(0.01).max(100000),
     pixKey: z.string().min(5).max(200),
     pixKeyType: z.enum([
       "cpf",
@@ -425,12 +425,6 @@ export async function POST(
         input.action ===
         "withdrawal"
       ) {
-        if (input.amount < 50) {
-          throw new Error(
-            "O valor mínimo para saque é R$ 50,00.",
-          );
-        }
-
         if (
           input.amount >
           data.wallet.balance
