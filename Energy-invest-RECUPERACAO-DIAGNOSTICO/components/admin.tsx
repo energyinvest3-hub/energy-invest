@@ -684,6 +684,21 @@ export function AdminPage({ records }: { records: AdminData }) {
                           tab,
                         );
 
+                      const cashoutStatus =
+                        String(
+                          row.cashout_status ?? "",
+                        ).toLowerCase();
+
+                      const cashoutLocked =
+                        [
+                          "sending",
+                          "created",
+                          "review",
+                          "paid",
+                        ].includes(
+                          cashoutStatus,
+                        );
+
                       const disabledUser =
                         Boolean(
                           row.banned_until &&
@@ -757,6 +772,17 @@ export function AdminPage({ records }: { records: AdminData }) {
                                           row.amount,
                                       ),
                                     )}
+                                  </small>
+                                )}
+
+                                {row.cashout_status && (
+                                  <small>
+                                    PushinPay:{" "}
+                                    <strong>
+                                      {String(
+                                        row.cashout_status,
+                                      )}
+                                    </strong>
                                   </small>
                                 )}
                               </>
@@ -935,6 +961,9 @@ export function AdminPage({ records }: { records: AdminData }) {
                                   <>
                                     <button
                                       className="button small primary"
+                                      disabled={
+                                        cashoutLocked
+                                      }
                                       onClick={() =>
                                         updateWithdrawal(
                                           String(
@@ -959,10 +988,16 @@ export function AdminPage({ records }: { records: AdminData }) {
                                       alreadyAuthorized={Boolean(
                                         row.auto_authorized_at,
                                       )}
+                                      cashoutStatus={String(
+                                        row.cashout_status ?? "",
+                                      )}
                                     />
 
                                     <button
                                       className="button small"
+                                      disabled={
+                                        cashoutLocked
+                                      }
                                       onClick={() =>
                                         updateWithdrawal(
                                           String(

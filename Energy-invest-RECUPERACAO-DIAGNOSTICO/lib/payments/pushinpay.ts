@@ -28,6 +28,20 @@ export const pushinPayTransactionSchema = z
   })
   .passthrough();
 
+export const pushinPayCashOutSchema = z
+  .object({
+    id: z.string().min(1),
+    status: z.string().min(1),
+    value: z.coerce.number().int().positive(),
+    end_to_end_id: z.string().nullable().optional(),
+    receiver_name: z.string().nullable().optional(),
+    receiver_national_registration: z.string().nullable().optional(),
+    pix_key_type: z.string().nullable().optional(),
+    pix_key: z.string().nullable().optional(),
+    webhook_url: z.string().nullable().optional(),
+  })
+  .passthrough();
+
 export const pushinPayWebhookSchema = z
   .object({
     id: z.string().min(1),
@@ -36,6 +50,24 @@ export const pushinPayWebhookSchema = z
     end_to_end_id: z.string().nullable().optional(),
   })
   .passthrough();
+
+export class PushinPayCashOutError extends Error {
+  retrySafe: boolean;
+  httpStatus?: number;
+
+  constructor(
+    message: string,
+    options: {
+      retrySafe: boolean;
+      httpStatus?: number;
+    },
+  ) {
+    super(message);
+    this.name = "PushinPayCashOutError";
+    this.retrySafe = options.retrySafe;
+    this.httpStatus = options.httpStatus;
+  }
+}
 
 function requiredEnv(name: string) {
   const value = process.env[name]?.trim();
@@ -142,7 +174,7 @@ export async function getPushinPayTransaction(id: string) {
   const { apiToken, baseUrl } = getPushinPayConfig();
 
   const response = await fetch(
-    `${baseUrl}/transactions/${encodeURIComponent(id)}`,
+    `${baseUrl}/transaction/${encodeURIComponent(id)}`,
     {
       method: "GET",
       headers: {
@@ -165,6 +197,82 @@ export async function getPushinPayTransaction(id: string) {
   const parsed = pushinPayTransactionSchema.safeParse(body);
   if (!parsed.success) {
     throw new Error("A PushinPay retornou uma transação em formato inesperado.");
+  }
+
+  return parsed.data;
+}
+
+function pushinPayPixKeyType(
+  type: "cpf" | "email" | "phone" | "random",
+) {
+  if (type === "cpf") return "national_registration";
+  if (type === "random") return "evp";
+  return type;
+}
+
+export async function createPushinPayCashOut(input: {
+  valueCents: number;
+  pixKeyType: "cpf" | "email" | "phone" | "random";
+  pixKey: string;
+  webhookUrl: string;
+}) {
+  const { apiToken, baseUrl } = getPushinPayConfig();
+
+  const pixKey =
+    input.pixKeyType === "cpf"
+      ? input.pixKey.replace(/\D/g, "")
+      : input.pixKey.trim();
+
+  const body: Record<string, unknown> = {
+    value: input.valueCents,
+    pix_key_type: pushinPayPixKeyType(input.pixKeyType),
+    pix_key: pixKey,
+    webhook_url: input.webhookUrl,
+  };
+
+  if (input.pixKeyType === "cpf") {
+    body.receiver_national_registration = pixKey;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${baseUrl}/pix/cashOut`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new PushinPayCashOutError(
+      "Não foi possível confirmar se a PushinPay recebeu o envio. Revise a transação no painel antes de tentar novamente.",
+      { retrySafe: false },
+    );
+  }
+
+  const responseBody = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new PushinPayCashOutError(
+      providerError(responseBody, response.status),
+      {
+        retrySafe: true,
+        httpStatus: response.status,
+      },
+    );
+  }
+
+  const parsed = pushinPayCashOutSchema.safeParse(responseBody);
+
+  if (!parsed.success) {
+    throw new PushinPayCashOutError(
+      "A PushinPay confirmou o envio, mas respondeu em formato inesperado. Revise no painel antes de tentar novamente.",
+      { retrySafe: false },
+    );
   }
 
   return parsed.data;

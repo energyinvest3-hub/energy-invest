@@ -459,7 +459,9 @@ export function WithdrawalPage() {
           ? /^\+55\d{10,11}$/.test(pixKey)
           : /^[0-9a-f-]{36}$/i.test(pixKey);
   const valid =
-    Number(amount) >= 1 && Number(amount) <= data.wallet.balance && keyValid;
+    Number(amount) >= 50 &&
+    Number(amount) <= data.wallet.balance &&
+    keyValid;
   async function submit() {
     setBusy(true);
     try {
@@ -504,8 +506,14 @@ export function WithdrawalPage() {
             label="Valor do saque"
             value={amount}
             onChange={setAmount}
+            min={50}
             max={data.wallet.balance}
           />
+          {Number(amount) > 0 && Number(amount) < 50 && (
+            <p className="field-error">
+              O valor mínimo para saque é R$ 50,00.
+            </p>
+          )}
           {Number(amount) > data.wallet.balance && (
             <p className="field-error">Saldo insuficiente para este saque.</p>
           )}
@@ -539,7 +547,7 @@ export function WithdrawalPage() {
           <div className="info-box">
             <ShieldCheck size={19} />
             <p>
-              Solicitações ficam disponíveis {withdrawalWindowLabel}, no horário de Brasília. É permitido apenas 1 saque por dia por conta. O valor solicitado é reservado da carteira e fica pendente até o processamento do PIX.
+              Solicitações ficam disponíveis {withdrawalWindowLabel}, no horário de Brasília. O saque mínimo é de R$ 50,00 e é permitido apenas 1 saque por dia por conta. Após sua solicitação, o valor fica reservado até o processamento do PIX.
             </p>
           </div>
           {!windowOpen && (

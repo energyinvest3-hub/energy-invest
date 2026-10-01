@@ -58,8 +58,8 @@ export function AdminPayoutControls() {
 
       setMessage(
         enabled
-          ? "Processamento automático ativado. Cada saque ainda precisa da sua autorização individual."
-          : "Processamento automático desativado.",
+          ? "CashOut ativado. O PIX só será enviado quando você autorizar individualmente o saque na aba Saques."
+          : "CashOut automático desativado. Nenhum PIX será enviado pela PushinPay.",
       );
 
       await load();
@@ -81,7 +81,7 @@ export function AdminPayoutControls() {
           <span className="eyebrow">
             CONTROLE DE SAQUES
           </span>
-          <h2>Autorização do PIX automático</h2>
+          <h2>PIX CashOut da PushinPay</h2>
         </div>
         <Settings size={20} />
       </div>
@@ -89,14 +89,14 @@ export function AdminPayoutControls() {
       <div className="info-box">
         <ShieldCheck size={19} />
         <p>
-          O processamento automático fica bloqueado por padrão.
-          Mesmo ativado, cada solicitação precisa da sua autorização
-          individual na aba Saques.
+          Quando ativado, o botão de autorização da aba Saques envia
+          o valor líquido diretamente para a chave PIX cadastrada.
+          Nada é enviado sem sua autorização individual.
         </p>
       </div>
 
       <label className="field">
-        Processamento automático
+        Envio de pagamentos
         <select
           value={enabled ? "on" : "off"}
           onChange={(event) =>
@@ -132,44 +132,81 @@ export function AdminPayoutControls() {
 export function AuthorizeAutomaticWithdrawalButton({
   withdrawalId,
   alreadyAuthorized,
+  cashoutStatus = "",
 }: {
   withdrawalId: string;
   alreadyAuthorized?: boolean;
+  cashoutStatus?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [authorized, setAuthorized] =
-    useState(Boolean(alreadyAuthorized));
+  const [status, setStatus] = useState(cashoutStatus);
+
+  const normalized = status.toLowerCase();
+
+  const locked = [
+    "sending",
+    "created",
+    "paid",
+    "review",
+  ].includes(normalized);
 
   async function authorize() {
     setBusy(true);
 
     try {
-      await payoutRequest({
+      const body = await payoutRequest({
         action: "authorize_withdrawal",
         withdrawalId,
       });
 
-      setAuthorized(true);
+      setStatus(
+        String(
+          body.cashout?.status ??
+            body.withdrawal?.cashout_status ??
+            "created",
+        ),
+      );
+
       router.refresh();
     } catch (error) {
       window.alert(
         error instanceof Error
           ? error.message
-          : "Não foi possível autorizar o saque.",
+          : "Não foi possível enviar o PIX.",
       );
+
+      router.refresh();
     } finally {
       setBusy(false);
     }
   }
 
+  const label =
+    normalized === "paid"
+      ? "PIX pago"
+      : normalized === "created" || normalized === "sending"
+        ? "PIX enviado"
+        : normalized === "review"
+          ? "Revisar na PushinPay"
+          : normalized === "failed"
+            ? "Tentar envio novamente"
+            : alreadyAuthorized
+              ? "Enviar PIX"
+              : "Autorizar e enviar PIX";
+
   return (
     <button
       className="button small"
-      disabled={busy || authorized}
+      disabled={busy || locked}
       onClick={authorize}
+      title={
+        normalized === "review"
+          ? "O resultado do envio ficou incerto. Confira a PushinPay antes de qualquer nova tentativa."
+          : undefined
+      }
     >
-      {authorized ? "Autorizado" : "Autorizar automático"}
+      {busy ? "Enviando…" : label}
     </button>
   );
 }

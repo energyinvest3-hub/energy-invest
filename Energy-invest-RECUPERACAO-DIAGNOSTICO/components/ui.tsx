@@ -115,11 +115,13 @@ export function AmountInput({
   value,
   onChange,
   label = "Valor",
+  min = 1,
   max,
 }: {
   value: string;
   onChange: (value: string) => void;
   label?: string;
+  min?: number;
   max?: number;
 }) {
   return (
@@ -133,7 +135,7 @@ export function AmountInput({
           inputMode="decimal"
           placeholder="0,00"
           step="0.01"
-          min="1"
+          min={min}
           max={max}
           value={value}
           onChange={(e) => onChange(e.target.value)}
