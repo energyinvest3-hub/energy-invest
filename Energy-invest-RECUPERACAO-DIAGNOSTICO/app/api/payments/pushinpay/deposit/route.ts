@@ -17,7 +17,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  amount: z.number().min(1).max(100000),
+  amount: z.number().min(1).max(150),
 });
 
 function firstRow<T>(data: T | T[] | null): T | null {
@@ -148,8 +148,16 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof z.ZodError) {
+      const tooHigh = error.issues.some(
+        (issue) => issue.code === "too_big",
+      );
+
       return Response.json(
-        { error: "Informe um valor válido para o PIX." },
+        {
+          error: tooHigh
+            ? "O valor máximo por depósito é de R$ 150,00. Para adicionar mais, faça depósitos separados de até R$ 150,00."
+            : "Informe um valor válido para o PIX.",
+        },
         { status: 400 },
       );
     }

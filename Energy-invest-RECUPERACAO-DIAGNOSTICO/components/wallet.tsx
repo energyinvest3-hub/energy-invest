@@ -205,7 +205,7 @@ export function DepositPage() {
     reversalPending?: boolean;
   } | null>(null);
 
-  const valid = Number(amount) >= 1 && Number(amount) <= 100000;
+  const valid = Number(amount) >= 1 && Number(amount) <= 150;
 
   useEffect(() => {
     const saved = window.sessionStorage.getItem("pushinpay_pending_deposit");
@@ -295,7 +295,7 @@ export function DepositPage() {
     <div className="narrow">
       <PageTitle
         title="Adicionar saldo"
-        description="Gere um PIX e receba o saldo automaticamente após a confirmação."
+        description="Adicione saldo via PIX em depósitos de até R$ 150,00 por vez."
         back="/carteira"
       />
 
@@ -404,7 +404,7 @@ export function DepositPage() {
           </p>
 
           <div className="quick-amounts">
-            {[50, 100, 200, 500, 1000].map((n) => (
+            {[50, 100, 150].map((n) => (
               <button
                 key={n}
                 onClick={() => setAmount(String(n))}
@@ -415,7 +415,30 @@ export function DepositPage() {
             ))}
           </div>
 
-          <AmountInput label="Outro valor" value={amount} onChange={setAmount} />
+          <AmountInput
+            label="Outro valor"
+            value={amount}
+            onChange={setAmount}
+            min={1}
+            max={150}
+          />
+
+          {Number(amount) > 150 && (
+            <p className="field-error">
+              O valor máximo por depósito é de R$ 150,00. Para adicionar mais,
+              faça depósitos separados de até R$ 150,00.
+            </p>
+          )}
+
+          <div className="info-box">
+            <Wallet size={20} />
+            <p>
+              <strong>Limite por PIX: R$ 150,00.</strong> Se quiser adicionar
+              um valor maior, faça depósitos aos poucos, em cobranças separadas
+              de até R$ 150,00, aguardando a confirmação de cada PIX antes de
+              gerar o próximo.
+            </p>
+          </div>
 
           <div className="info-box">
             <ShieldCheck size={20} />
