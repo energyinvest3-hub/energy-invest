@@ -1,101 +1,29 @@
--- EnergyInvest — saque mínimo R$50 + PushinPay PIX CashOut
--- Preserva a regra já existente: 1 saque por dia.
--- O envio só ocorre após autorização individual do ADMIN.
+-- EnergyInvest — corrige "Service role required" no CashOut.
+-- As funções abaixo são SECURITY DEFINER. O teste por current_user era inválido,
+-- porque dentro de SECURITY DEFINER current_user é o dono da função.
+-- A segurança continua pelo GRANT EXECUTE somente para service_role.
 begin;
 
-alter table public.withdrawals
-  add column if not exists fee_amount numeric(18,2),
-  add column if not exists net_amount numeric(18,2),
-  add column if not exists cashout_id text,
-  add column if not exists cashout_status text,
-  add column if not exists cashout_value numeric(18,2),
-  add column if not exists cashout_end_to_end_id text,
-  add column if not exists cashout_requested_at timestamptz,
-  add column if not exists cashout_paid_at timestamptz,
-  add column if not exists cashout_error text;
-
-create unique index if not exists withdrawals_cashout_id_unique
-on public.withdrawals(cashout_id)
-where cashout_id is not null;
-
-update public.withdrawals
-set
-  fee_amount = coalesce(
-    fee_amount,
-    round(amount * 0.05, 2)
-  ),
-  net_amount = coalesce(
-    net_amount,
-    round(
-      amount - coalesce(fee_amount, round(amount * 0.05, 2)),
-      2
-    )
-  )
-where fee_amount is null
-   or net_amount is null;
-
-create or replace function private.prepare_withdrawal_rules()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if new.amount < 50 then
-    raise exception 'O valor mínimo para saque é R$ 50,00.';
-  end if;
-
-  if new.fee_amount is null then
-    new.fee_amount := round(new.amount * 0.05, 2);
-  end if;
-
-  if new.net_amount is null then
-    new.net_amount := round(new.amount - new.fee_amount, 2);
-  end if;
-
-  if new.net_amount <= 0 then
-    raise exception 'Valor líquido do saque inválido.';
-  end if;
-
-  return new;
-end;
-$$;
-
-revoke all on function private.prepare_withdrawal_rules()
-from public, anon, authenticated;
-
-drop trigger if exists prepare_withdrawal_rules_trigger
-on public.withdrawals;
-
-create trigger prepare_withdrawal_rules_trigger
-before insert or update of amount
-on public.withdrawals
-for each row
-execute function private.prepare_withdrawal_rules();
-
-create or replace function public.admin_claim_withdrawal_cashout(
-  p_withdrawal_id uuid
+create or replace function public.service_claim_pushinpay_cashout(
+  p_withdrawal_id uuid,
+  p_admin_user_id uuid
 ) returns public.withdrawals
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  v_user_id uuid := (select auth.uid());
   v_enabled boolean := false;
   v_row public.withdrawals%rowtype;
 begin
-  if v_user_id is null or not private.is_admin() then
-    raise exception 'Administrator required';
-  end if;
-
   select automatic_processing_enabled
   into v_enabled
   from public.withdrawal_control_settings
   where id = true;
 
   if coalesce(v_enabled, false) = false then
-    raise exception 'Ative o PIX CashOut nas Configurações antes de enviar.';
+    raise exception
+      'O PIX CashOut está desativado. Ative e salve em Configurações antes de enviar.';
   end if;
 
   select *
@@ -112,22 +40,23 @@ begin
     raise exception 'Este saque não está pendente.';
   end if;
 
-  if v_row.amount < 50 then
-    raise exception 'O valor mínimo para saque é R$ 50,00.';
-  end if;
-
   if v_row.cashout_id is not null then
     raise exception 'Este saque já foi enviado para a PushinPay.';
   end if;
 
-  if coalesce(v_row.cashout_status, '') in ('sending','created','paid','review') then
-    raise exception 'Este saque já possui um envio em andamento ou precisa de revisão.';
+  if coalesce(v_row.cashout_status, '') in ('sending','created','paid') then
+    raise exception 'Este saque já possui um envio em andamento.';
+  end if;
+
+  if coalesce(v_row.cashout_status, '') = 'review' then
+    raise exception
+      'Este saque precisa ser conferido no painel da PushinPay antes de qualquer nova tentativa.';
   end if;
 
   update public.withdrawals
   set
     auto_authorized_at = coalesce(auto_authorized_at, now()),
-    auto_authorized_by = coalesce(auto_authorized_by, v_user_id),
+    auto_authorized_by = coalesce(auto_authorized_by, p_admin_user_id),
     cashout_status = 'sending',
     cashout_requested_at = now(),
     cashout_error = null
@@ -142,7 +71,7 @@ begin
     metadata
   )
   values(
-    v_user_id,
+    p_admin_user_id,
     'authorize_pushinpay_cashout',
     'withdrawal',
     p_withdrawal_id,
@@ -157,11 +86,14 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_claim_withdrawal_cashout(uuid)
-from public, anon;
+revoke all
+on function public.service_claim_pushinpay_cashout(uuid,uuid)
+from public, anon, authenticated;
 
-grant execute on function public.admin_claim_withdrawal_cashout(uuid)
-to authenticated;
+grant execute
+on function public.service_claim_pushinpay_cashout(uuid,uuid)
+to service_role;
+
 
 create or replace function public.attach_pushinpay_cashout(
   p_withdrawal_id uuid,
@@ -192,7 +124,8 @@ begin
     round(coalesce(v_row.net_amount, v_row.amount) * 100)::bigint;
 
   if v_expected <> p_value_cents then
-    raise exception 'Valor do CashOut não confere com o valor líquido do saque.';
+    raise exception
+      'Valor do CashOut não confere com o valor líquido do saque.';
   end if;
 
   if v_row.cashout_id is not null
@@ -217,11 +150,14 @@ begin
 end;
 $$;
 
-revoke all on function public.attach_pushinpay_cashout(uuid,text,bigint,text,text)
+revoke all
+on function public.attach_pushinpay_cashout(uuid,text,bigint,text,text)
 from public, anon, authenticated;
 
-grant execute on function public.attach_pushinpay_cashout(uuid,text,bigint,text,text)
+grant execute
+on function public.attach_pushinpay_cashout(uuid,text,bigint,text,text)
 to service_role;
+
 
 create or replace function public.settle_pushinpay_withdrawal(
   p_cashout_id text,
@@ -252,7 +188,9 @@ begin
   end if;
 
   v_expected :=
-    round(coalesce(v_row.cashout_value, v_row.net_amount, v_row.amount) * 100)::bigint;
+    round(
+      coalesce(v_row.cashout_value, v_row.net_amount, v_row.amount) * 100
+    )::bigint;
 
   if v_expected <> p_value_cents then
     return jsonb_build_object(
@@ -306,11 +244,7 @@ begin
     set total_withdrawn = total_withdrawn + v_row.amount
     where user_id = v_row.user_id;
 
-    insert into public.notifications(
-      user_id,
-      title,
-      message
-    )
+    insert into public.notifications(user_id, title, message)
     values(
       v_row.user_id,
       'Saque enviado',
@@ -356,11 +290,7 @@ begin
       and reference_id = v_row.id
       and status = 'pending';
 
-    insert into public.notifications(
-      user_id,
-      title,
-      message
-    )
+    insert into public.notifications(user_id, title, message)
     values(
       v_row.user_id,
       'Saque não concluído',
@@ -382,10 +312,12 @@ begin
 end;
 $$;
 
-revoke all on function public.settle_pushinpay_withdrawal(text,bigint,text,text)
+revoke all
+on function public.settle_pushinpay_withdrawal(text,bigint,text,text)
 from public, anon, authenticated;
 
-grant execute on function public.settle_pushinpay_withdrawal(text,bigint,text,text)
+grant execute
+on function public.settle_pushinpay_withdrawal(text,bigint,text,text)
 to service_role;
 
 commit;

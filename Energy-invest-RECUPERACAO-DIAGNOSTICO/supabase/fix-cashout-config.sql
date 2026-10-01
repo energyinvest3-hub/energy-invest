@@ -97,11 +97,6 @@ declare
   v_enabled boolean := false;
   v_row public.withdrawals%rowtype;
 begin
-  if current_user <> 'service_role' then
-    raise exception
-      'Service role required';
-  end if;
-
   select
     automatic_processing_enabled
   into v_enabled

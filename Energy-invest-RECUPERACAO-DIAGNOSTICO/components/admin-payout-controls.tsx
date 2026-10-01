@@ -148,7 +148,11 @@ export function AdminPayoutControls() {
         <select
           disabled={busy || loading}
           value={
-            enabled ? "on" : "off"
+            loading
+              ? "loading"
+              : enabled
+                ? "on"
+                : "off"
           }
           onChange={(event) =>
             setEnabled(
@@ -157,6 +161,11 @@ export function AdminPayoutControls() {
             )
           }
         >
+          {loading && (
+            <option value="loading">
+              Carregando configuração…
+            </option>
+          )}
           <option value="off">
             Desativado
           </option>
