@@ -539,7 +539,7 @@ export function WithdrawalPage() {
           <div className="info-box">
             <ShieldCheck size={19} />
             <p>
-              Solicitações ficam disponíveis {withdrawalWindowLabel}, no horário de Brasília. O valor solicitado é reservado da carteira e fica pendente até o processamento do PIX.
+              Solicitações ficam disponíveis {withdrawalWindowLabel}, no horário de Brasília. É permitido apenas 1 saque por dia por conta. O valor solicitado é reservado da carteira e fica pendente até o processamento do PIX.
             </p>
           </div>
           {!windowOpen && (
