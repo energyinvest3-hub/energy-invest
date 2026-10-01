@@ -4,6 +4,7 @@ import { z } from "zod";
 import { validPhone } from "@/lib/validation";
 import { demoData, isDemo } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   clientIp,
   rateLimit,
@@ -49,6 +50,10 @@ const schema = z.discriminatedUnion("action", [
       "phone",
       "random",
     ]),
+    receiverNationalRegistration: z
+      .string()
+      .min(11)
+      .max(20),
   }),
 
   z.object({
@@ -1186,6 +1191,28 @@ export async function POST(
         );
       }
 
+      const receiverNationalRegistration =
+        input.receiverNationalRegistration.replace(/\D/g, "");
+
+      if (
+        receiverNationalRegistration.length !== 11 &&
+        receiverNationalRegistration.length !== 14
+      ) {
+        throw new Error(
+          "Informe o CPF ou CNPJ do titular da chave PIX.",
+        );
+      }
+
+      if (
+        input.pixKeyType === "cpf" &&
+        input.pixKey.replace(/\D/g, "") !==
+          receiverNationalRegistration
+      ) {
+        throw new Error(
+          "O CPF do titular precisa ser igual à chave PIX CPF.",
+        );
+      }
+
       const {
         data: withdrawal,
         error,
@@ -1205,6 +1232,69 @@ export async function POST(
 
       if (error) {
         throw error;
+      }
+
+      const admin = supabaseAdmin();
+
+      const withdrawalId =
+        typeof withdrawal === "string"
+          ? withdrawal
+          : Array.isArray(withdrawal)
+            ? String(
+                (withdrawal[0] as { id?: unknown } | undefined)
+                  ?.id ?? "",
+              )
+            : withdrawal &&
+                typeof withdrawal === "object"
+              ? String(
+                  (withdrawal as { id?: unknown }).id ?? "",
+                )
+              : "";
+
+      let targetWithdrawalId = withdrawalId;
+
+      if (!targetWithdrawalId) {
+        const {
+          data: latestWithdrawal,
+          error: latestWithdrawalError,
+        } = await admin
+          .from("withdrawals")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("status", "pending")
+          .eq("pix_key", input.pixKey)
+          .eq("pix_key_type", input.pixKeyType)
+          .eq("amount", input.amount)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestWithdrawalError) {
+          throw new Error(latestWithdrawalError.message);
+        }
+
+        targetWithdrawalId = String(
+          latestWithdrawal?.id ?? "",
+        );
+      }
+
+      if (!targetWithdrawalId) {
+        throw new Error(
+          "O saque foi criado, mas não foi possível vincular o documento do titular. Entre em contato com o suporte.",
+        );
+      }
+
+      const { error: receiverDocumentError } = await admin
+        .from("withdrawals")
+        .update({
+          receiver_national_registration:
+            receiverNationalRegistration,
+        })
+        .eq("id", targetWithdrawalId)
+        .eq("user_id", user.id);
+
+      if (receiverDocumentError) {
+        throw new Error(receiverDocumentError.message);
       }
 
       return Response.json({

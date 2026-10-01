@@ -995,6 +995,16 @@ export function AdminPage({ records }: { records: AdminData }) {
                                       cashoutStatus={String(
                                         row.cashout_status ?? "",
                                       )}
+                                      pixKeyType={String(
+                                        row.pix_key_type ?? "",
+                                      )}
+                                      pixKey={String(
+                                        row.pix_key ?? "",
+                                      )}
+                                      receiverNationalRegistration={String(
+                                        row.receiver_national_registration ??
+                                          "",
+                                      )}
                                     />
 
                                     <button

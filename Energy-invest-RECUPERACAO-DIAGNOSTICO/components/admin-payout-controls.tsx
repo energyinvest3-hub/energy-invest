@@ -174,16 +174,30 @@ export function ManualPixPayoutForm() {
   const [pixKeyType, setPixKeyType] =
     useState<"cpf" | "email" | "phone" | "random">("cpf");
   const [pixKey, setPixKey] = useState("");
+  const [
+    receiverNationalRegistration,
+    setReceiverNationalRegistration,
+  ] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const numericAmount = Number(amount.replace(",", "."));
 
+  const receiverDocument =
+    pixKeyType === "cpf"
+      ? pixKey.replace(/\D/g, "")
+      : receiverNationalRegistration.replace(/\D/g, "");
+
+  const receiverDocumentValid =
+    receiverDocument.length === 11 ||
+    receiverDocument.length === 14;
+
   const valid =
     Number.isFinite(numericAmount) &&
     numericAmount > 0 &&
-    pixKey.trim().length >= 3;
+    pixKey.trim().length >= 3 &&
+    receiverDocumentValid;
 
   async function send() {
     if (!valid || busy) return;
@@ -194,7 +208,7 @@ export function ManualPixPayoutForm() {
     });
 
     const confirmed = window.confirm(
-      `Enviar ${formatted} via PIX para:\n\n${pixKey}\n\nEsse pagamento sai da sua conta PushinPay. Confirma o envio?`,
+      `Enviar ${formatted} via PIX para:\n\n${pixKey}\nCPF/CNPJ do titular: ${receiverDocument}\n\nEsse pagamento sai da sua conta PushinPay. Confirma o envio?`,
     );
 
     if (!confirmed) return;
@@ -209,6 +223,8 @@ export function ManualPixPayoutForm() {
         amount: Math.round(numericAmount * 100) / 100,
         pixKeyType,
         pixKey: pixKey.trim(),
+        receiverNationalRegistration:
+          receiverDocument,
       });
 
       setMessage(
@@ -221,6 +237,7 @@ export function ManualPixPayoutForm() {
 
       setAmount("");
       setPixKey("");
+      setReceiverNationalRegistration("");
     } catch (err) {
       setError(
         err instanceof Error
@@ -300,6 +317,23 @@ export function ManualPixPayoutForm() {
           />
         </label>
 
+        {pixKeyType !== "cpf" && (
+          <label className="field">
+            CPF/CNPJ do titular da chave
+            <input
+              value={receiverNationalRegistration}
+              disabled={busy}
+              inputMode="numeric"
+              placeholder="CPF ou CNPJ de quem vai receber"
+              onChange={(event) =>
+                setReceiverNationalRegistration(
+                  event.target.value,
+                )
+              }
+            />
+          </label>
+        )}
+
         <label className="field">
           Valor a enviar
           <input
@@ -352,10 +386,16 @@ export function ManualPixPayoutForm() {
 
 export function AuthorizeAutomaticWithdrawalButton({
   withdrawalId,
+  pixKeyType = "",
+  pixKey = "",
+  receiverNationalRegistration = "",
   alreadyAuthorized,
   cashoutStatus = "",
 }: {
   withdrawalId: string;
+  pixKeyType?: string;
+  pixKey?: string;
+  receiverNationalRegistration?: string;
   alreadyAuthorized?: boolean;
   cashoutStatus?: string;
 }) {
@@ -373,12 +413,47 @@ export function AuthorizeAutomaticWithdrawalButton({
   ].includes(normalized);
 
   async function authorize() {
+    const normalizedType =
+      pixKeyType.trim().toLowerCase();
+
+    let receiverDocument =
+      receiverNationalRegistration.replace(/\D/g, "");
+
+    if (
+      ["cpf", "cnpj", "national_registration"].includes(
+        normalizedType,
+      )
+    ) {
+      receiverDocument = pixKey.replace(/\D/g, "");
+    } else {
+      const typed = window.prompt(
+        "Informe o CPF ou CNPJ do titular desta chave PIX. A PushinPay valida se o documento corresponde à chave.",
+        receiverDocument,
+      );
+
+      if (typed === null) return;
+
+      receiverDocument = typed.replace(/\D/g, "");
+    }
+
+    if (
+      receiverDocument.length !== 11 &&
+      receiverDocument.length !== 14
+    ) {
+      window.alert(
+        "Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.",
+      );
+      return;
+    }
+
     setBusy(true);
 
     try {
       const body = await payoutRequest({
         action: "authorize_withdrawal",
         withdrawalId,
+        receiverNationalRegistration:
+          receiverDocument,
       });
 
       setStatus(

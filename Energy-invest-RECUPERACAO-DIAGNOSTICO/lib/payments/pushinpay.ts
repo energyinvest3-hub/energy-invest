@@ -307,6 +307,7 @@ export async function createPushinPayCashOut(input: {
   valueCents: number;
   pixKeyType: string;
   pixKey: string;
+  receiverNationalRegistration?: string | null;
   webhookUrl: string;
 }) {
   const { apiToken, baseUrl } = getPushinPayConfig();
@@ -316,8 +317,37 @@ export async function createPushinPayCashOut(input: {
     input.pixKey,
   );
 
+  const providedDocument =
+    input.receiverNationalRegistration
+      ?.replace(/\D/g, "") || "";
+
+  const receiverNationalRegistration =
+    normalizedPix.receiverNationalRegistration ||
+    providedDocument;
+
+  if (
+    receiverNationalRegistration.length !== 11 &&
+    receiverNationalRegistration.length !== 14
+  ) {
+    throw new Error(
+      "Informe o CPF ou CNPJ do titular da chave PIX.",
+    );
+  }
+
+  if (
+    normalizedPix.receiverNationalRegistration &&
+    providedDocument &&
+    normalizedPix.receiverNationalRegistration !== providedDocument
+  ) {
+    throw new Error(
+      "O CPF/CNPJ do titular não corresponde à chave PIX informada.",
+    );
+  }
+
   const body: Record<string, unknown> = {
     value: input.valueCents,
+    receiver_national_registration:
+      receiverNationalRegistration,
     pix_key_type: normalizedPix.providerType,
     pix_key: normalizedPix.pixKey,
     webhook_url: input.webhookUrl,
@@ -325,11 +355,6 @@ export async function createPushinPayCashOut(input: {
       process.env.PUSHINPAY_DEVICE_ID?.trim() || "1",
     ),
   };
-
-  if (normalizedPix.receiverNationalRegistration) {
-    body.receiver_national_registration =
-      normalizedPix.receiverNationalRegistration;
-  }
 
   let response: Response;
 

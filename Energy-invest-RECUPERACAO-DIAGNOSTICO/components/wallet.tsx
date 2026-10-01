@@ -446,6 +446,10 @@ export function WithdrawalPage() {
   const [amount, setAmount] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [pixKeyType, setType] = useState("cpf");
+  const [
+    receiverNationalRegistration,
+    setReceiverNationalRegistration,
+  ] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -458,10 +462,21 @@ export function WithdrawalPage() {
         : pixKeyType === "phone"
           ? /^\+55\d{10,11}$/.test(pixKey)
           : /^[0-9a-f-]{36}$/i.test(pixKey);
+  const receiverDocument =
+    pixKeyType === "cpf"
+      ? pixKey.replace(/\D/g, "")
+      : receiverNationalRegistration.replace(/\D/g, "");
+
+  const receiverDocumentValid =
+    receiverDocument.length === 11 ||
+    receiverDocument.length === 14;
+
   const valid =
     Number(amount) >= 0.01 &&
     Number(amount) <= data.wallet.balance &&
-    keyValid;
+    keyValid &&
+    receiverDocumentValid;
+
   async function submit() {
     setBusy(true);
     try {
@@ -470,6 +485,8 @@ export function WithdrawalPage() {
         amount: Number(amount),
         pixKey,
         pixKeyType,
+        receiverNationalRegistration:
+          receiverDocument,
       });
       setDone(true);
       setConfirm(false);
@@ -539,6 +556,29 @@ export function WithdrawalPage() {
           {pixKey && !keyValid && (
             <p className="field-error">Confira o formato da chave PIX.</p>
           )}
+
+          {pixKeyType !== "cpf" && (
+            <label className="field">
+              CPF/CNPJ do titular da chave
+              <input
+                value={receiverNationalRegistration}
+                onChange={(e) =>
+                  setReceiverNationalRegistration(e.target.value)
+                }
+                inputMode="numeric"
+                placeholder="CPF ou CNPJ de quem vai receber"
+              />
+            </label>
+          )}
+
+          {pixKeyType !== "cpf" &&
+            receiverNationalRegistration &&
+            !receiverDocumentValid && (
+              <p className="field-error">
+                Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.
+              </p>
+            )}
+
           <div className="info-box">
             <ShieldCheck size={19} />
             <p>
@@ -570,6 +610,10 @@ export function WithdrawalPage() {
             <div>
               <dt>Chave PIX</dt>
               <dd>{pixKey}</dd>
+            </div>
+            <div>
+              <dt>CPF/CNPJ do titular</dt>
+              <dd>{receiverDocument}</dd>
             </div>
           </dl>
           <p>Revise sua chave antes de confirmar. O valor será reservado do saldo e a solicitação ficará pendente até o processamento.</p>

@@ -17,12 +17,23 @@ const schema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("authorize_withdrawal"),
     withdrawalId: z.string().uuid(),
+    receiverNationalRegistration: z
+      .string()
+      .trim()
+      .min(11)
+      .max(20)
+      .optional(),
   }),
   z.object({
     action: z.literal("manual_cashout"),
     amount: z.number().positive().max(100000),
     pixKeyType: z.enum(["cpf", "email", "phone", "random"]),
     pixKey: z.string().trim().min(3).max(200),
+    receiverNationalRegistration: z
+      .string()
+      .trim()
+      .min(11)
+      .max(20),
   }),
 ]);
 
@@ -55,6 +66,18 @@ function errorMessage(error: unknown) {
   }
 
   return "Não foi possível concluir.";
+}
+
+function normalizeNationalRegistration(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (digits.length !== 11 && digits.length !== 14) {
+    throw new Error(
+      "Informe o CPF ou CNPJ do titular da chave PIX.",
+    );
+  }
+
+  return digits;
 }
 
 function normalizePixKey(
@@ -205,6 +228,13 @@ export async function POST(request: Request) {
         input.pixKey,
       );
 
+      const receiverNationalRegistration =
+        input.pixKeyType === "cpf"
+          ? normalizeNationalRegistration(pixKey)
+          : normalizeNationalRegistration(
+              input.receiverNationalRegistration,
+            );
+
       const { data: payout, error: createError } = await admin
         .from("manual_pix_payouts")
         .insert({
@@ -212,6 +242,8 @@ export async function POST(request: Request) {
           amount,
           pix_key_type: input.pixKeyType,
           pix_key: pixKey,
+          receiver_national_registration:
+            receiverNationalRegistration,
           status: "sending",
         })
         .select("*")
@@ -224,6 +256,7 @@ export async function POST(request: Request) {
           valueCents,
           pixKeyType: input.pixKeyType,
           pixKey,
+          receiverNationalRegistration,
           webhookUrl: pushinPayWebhookUrl(request),
         });
 
@@ -305,6 +338,66 @@ export async function POST(request: Request) {
       );
     }
 
+    const {
+      data: withdrawalBeforeClaim,
+      error: withdrawalLookupError,
+    } = await admin
+      .from("withdrawals")
+      .select(
+        "id,user_id,status,pix_key,pix_key_type,receiver_national_registration",
+      )
+      .eq("id", input.withdrawalId)
+      .maybeSingle();
+
+    if (withdrawalLookupError) {
+      throw new Error(withdrawalLookupError.message);
+    }
+
+    if (!withdrawalBeforeClaim) {
+      throw new Error("Saque não encontrado.");
+    }
+
+    const rawPixType = String(
+      withdrawalBeforeClaim.pix_key_type ?? "",
+    )
+      .trim()
+      .toLowerCase();
+
+    const rawPixKey = String(
+      withdrawalBeforeClaim.pix_key ?? "",
+    ).trim();
+
+    const receiverNationalRegistration =
+      ["cpf", "cnpj", "national_registration"].includes(
+        rawPixType,
+      )
+        ? normalizeNationalRegistration(rawPixKey)
+        : normalizeNationalRegistration(
+            input.receiverNationalRegistration ??
+              String(
+                withdrawalBeforeClaim
+                  .receiver_national_registration ?? "",
+              ),
+          );
+
+    if (
+      String(
+        withdrawalBeforeClaim.receiver_national_registration ?? "",
+      ).replace(/\D/g, "") !== receiverNationalRegistration
+    ) {
+      const { error: receiverUpdateError } = await admin
+        .from("withdrawals")
+        .update({
+          receiver_national_registration:
+            receiverNationalRegistration,
+        })
+        .eq("id", input.withdrawalId);
+
+      if (receiverUpdateError) {
+        throw new Error(receiverUpdateError.message);
+      }
+    }
+
     const { data: withdrawal, error: claimError } =
       await admin.rpc(
         "service_claim_pushinpay_cashout",
@@ -331,6 +424,7 @@ export async function POST(request: Request) {
         valueCents,
         pixKeyType: String(row.pix_key_type ?? ""),
         pixKey: String(row.pix_key ?? ""),
+        receiverNationalRegistration,
         webhookUrl: pushinPayWebhookUrl(request),
       });
 
