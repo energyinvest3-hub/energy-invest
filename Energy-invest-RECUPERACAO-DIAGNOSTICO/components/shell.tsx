@@ -223,6 +223,7 @@ function LaunchTicker() {
     "SOLAR PARANÁ PRO · R$ 150",
     "15 DIAS · 2,5X",
     "CONDIÇÃO PROMOCIONAL POR TEMPO LIMITADO",
+    "PLANO PRÊMIO · R$ 50 EM DEPÓSITOS CONFIRMADOS",
   ];
   const repeated = [...items, ...items];
   return (
@@ -376,6 +377,11 @@ function LaunchWelcomeModal() {
               Consulte disponibilidade e detalhes de
               cada projeto antes de participar.
               Projeções não são garantia de resultado.
+              <br />
+              <strong>Plano Prêmio:</strong> após R$ 50,00 em depósitos
+              confirmados feitos desde o início da promoção, a conta pode
+              solicitar saque fora da janela padrão de segunda a sexta,
+              das 09:00 às 18:00.
             </span>
           </div>
 

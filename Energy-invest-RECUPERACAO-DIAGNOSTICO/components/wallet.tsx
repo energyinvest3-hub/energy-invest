@@ -194,7 +194,7 @@ export function WalletPage() {
   );
 }
 export function DepositPage() {
-  const { toast, refresh } = useApp();
+  const { data, toast, refresh } = useApp();
   const [amount, setAmount] = useState("100");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -210,6 +210,13 @@ export function DepositPage() {
   } | null>(null);
 
   const valid = Number(amount) >= 1 && Number(amount) <= 150;
+  const premiumDepositProgress = premiumPlanDepositTotal(
+    data.transactions,
+  );
+  const premiumDepositRemaining = Math.max(
+    0,
+    premiumPlanMinDeposit - premiumDepositProgress,
+  );
 
   useEffect(() => {
     const saved = window.sessionStorage.getItem("pushinpay_pending_deposit");
@@ -444,6 +451,28 @@ export function DepositPage() {
             </p>
           </div>
 
+          <div className="info-box" role="status">
+            <Gift size={20} />
+            <p>
+              <strong>Plano Prêmio.</strong>{" "}
+              {premiumDepositRemaining > 0 ? (
+                <>
+                  Você já possui {money(premiumDepositProgress)} em depósitos
+                  confirmados desta promoção. Faltam{" "}
+                  <strong>{money(premiumDepositRemaining)}</strong> para atingir
+                  os {money(premiumPlanMinDeposit)} necessários para solicitar
+                  saque fora da janela padrão.
+                </>
+              ) : (
+                <>
+                  Benefício liberado: você já atingiu{" "}
+                  <strong>{money(premiumPlanMinDeposit)}</strong> em depósitos
+                  confirmados desta promoção.
+                </>
+              )}
+            </p>
+          </div>
+
           <div className="info-box">
             <ShieldCheck size={20} />
             <p>
@@ -480,6 +509,8 @@ export function WithdrawalPage() {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [premiumNoticeOpen, setPremiumNoticeOpen] =
+    useState(false);
   const windowOpen = isWithdrawalWindow();
   const premiumDeposited = premiumPlanDepositTotal(
     data.transactions,
@@ -488,6 +519,18 @@ export function WithdrawalPage() {
     premiumDeposited >= premiumPlanMinDeposit;
   const canWithdrawNow =
     windowOpen || premiumEligible;
+  const premiumRemaining = Math.max(
+    0,
+    premiumPlanMinDeposit - premiumDeposited,
+  );
+
+  useEffect(() => {
+    if (!canWithdrawNow) {
+      setPremiumNoticeOpen(true);
+    } else {
+      setPremiumNoticeOpen(false);
+    }
+  }, [canWithdrawNow]);
 
   const keyValid =
     pixKeyType === "email"
@@ -554,6 +597,30 @@ export function WithdrawalPage() {
             <span>Saldo disponível</span>
             <strong>{money(data.wallet.balance)}</strong>
           </div>
+
+          {!canWithdrawNow && (
+            <div className="info-box" role="alert">
+              <Gift size={20} />
+              <p>
+                <strong>Saque temporariamente bloqueado.</strong> A janela
+                padrão está fechada e o Plano Prêmio ainda não foi liberado.
+                Você possui {money(premiumDeposited)} em depósitos confirmados
+                desta promoção e precisa completar mais{" "}
+                <strong>{money(premiumRemaining)}</strong>.
+              </p>
+            </div>
+          )}
+
+          {!canWithdrawNow && (
+            <Link
+              className="button primary full"
+              href="/carteira/deposito"
+            >
+              Completar depósito do Plano Prêmio
+              <ArrowUpRight size={18} />
+            </Link>
+          )}
+
           <AmountInput
             label="Valor do saque"
             value={amount}
@@ -655,6 +722,55 @@ export function WithdrawalPage() {
           </button>
         </section>
       )}
+      {premiumNoticeOpen && !canWithdrawNow && (
+        <Modal
+          title="Plano Prêmio"
+          onClose={() => setPremiumNoticeOpen(false)}
+        >
+          <div className="info-box" role="alert">
+            <Gift size={20} />
+            <p>
+              <strong>Saque fora da janela padrão bloqueado.</strong> Para
+              liberar esse benefício, complete pelo menos{" "}
+              {money(premiumPlanMinDeposit)} em depósitos confirmados feitos
+              depois do início desta promoção.
+            </p>
+          </div>
+
+          <dl className="detail-list">
+            <div>
+              <dt>Já confirmado na promoção</dt>
+              <dd>{money(premiumDeposited)}</dd>
+            </div>
+            <div>
+              <dt>Falta para liberar</dt>
+              <dd>{money(premiumRemaining)}</dd>
+            </div>
+            <div>
+              <dt>Janela padrão</dt>
+              <dd>{withdrawalWindowLabel}</dd>
+            </div>
+          </dl>
+
+          <Link
+            className="button primary full"
+            href="/carteira/deposito"
+            onClick={() => setPremiumNoticeOpen(false)}
+          >
+            Completar depósito
+            <ArrowUpRight size={18} />
+          </Link>
+
+          <button
+            className="button full"
+            type="button"
+            onClick={() => setPremiumNoticeOpen(false)}
+          >
+            Entendi
+          </button>
+        </Modal>
+      )}
+
       {confirm && (
         <Modal title="Confirmar solicitação" onClose={() => setConfirm(false)}>
           <dl className="detail-list">
@@ -671,7 +787,13 @@ export function WithdrawalPage() {
               <dd>{receiverDocument}</dd>
             </div>
           </dl>
-          <p>Revise sua chave antes de confirmar. O valor será reservado do saldo e a solicitação ficará pendente até o processamento.</p>
+          <p>
+            Revise sua chave antes de confirmar. O valor será reservado do
+            saldo e a solicitação ficará pendente até o processamento.
+            {!windowOpen && premiumEligible
+              ? " Esta solicitação está sendo permitida pelo Plano Prêmio."
+              : ""}
+          </p>
           <button
             className="button primary full"
             disabled={busy}
