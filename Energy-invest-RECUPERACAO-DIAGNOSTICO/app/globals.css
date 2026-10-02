@@ -4646,3 +4646,159 @@ table td small { display: block; margin-top: 6px; color: var(--muted); }
     font-size: 9px;
   }
 }
+
+/* FIX v5.1 — popup Saque Premium sempre dentro da viewport */
+.premium-withdrawal-popup {
+  height: min(720px, calc(100dvh - 48px));
+  max-height: calc(100dvh - 48px);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.premium-withdrawal-popup .promo-v2-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 28px 32px 24px;
+  scrollbar-width: thin;
+}
+
+.premium-withdrawal-popup .promo-v2-kicker {
+  margin-top: 18px;
+}
+
+.premium-withdrawal-popup h2 {
+  margin-top: 6px;
+  font-size: clamp(30px, 3.7vw, 41px);
+  line-height: 1.01;
+}
+
+.premium-withdrawal-popup .promo-v2-copy {
+  margin-top: 11px;
+  font-size: 13px;
+  line-height: 1.58;
+}
+
+.premium-withdrawal-popup .premium-withdrawal-grid {
+  margin-top: 16px;
+}
+
+.premium-withdrawal-popup .premium-withdrawal-card {
+  padding: 14px;
+}
+
+.premium-withdrawal-popup .premium-withdrawal-icon {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 10px;
+}
+
+.premium-withdrawal-popup .premium-withdrawal-card > strong {
+  font-size: 21px;
+}
+
+.premium-withdrawal-popup .premium-withdrawal-card > p {
+  margin-top: 5px;
+}
+
+.premium-withdrawal-popup .premium-withdrawal-progress {
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+.premium-withdrawal-popup .promo-v2-note {
+  margin-top: 10px;
+  padding: 11px 12px;
+  line-height: 1.45;
+}
+
+.premium-withdrawal-popup .promo-v2-actions {
+  margin-top: 12px;
+}
+
+.premium-withdrawal-popup .promo-v2-actions .button {
+  min-height: 46px;
+}
+
+.premium-withdrawal-popup .promo-v2-hero {
+  min-height: 0;
+  height: 100%;
+}
+
+.premium-withdrawal-popup .promo-v2-hero-copy {
+  bottom: 22px;
+}
+
+.premium-withdrawal-popup .promo-v2-hero-copy strong {
+  font-size: 24px;
+  line-height: 1.06;
+}
+
+@media (max-width: 820px) {
+  .premium-withdrawal-popup {
+    height: calc(100dvh - 24px);
+    max-height: calc(100dvh - 24px);
+    grid-template-rows: 150px minmax(0, 1fr);
+  }
+
+  .premium-withdrawal-popup .promo-v2-hero {
+    min-height: 0;
+    height: auto;
+  }
+
+  .premium-withdrawal-popup .promo-v2-content {
+    min-height: 0;
+    padding: 20px 18px 18px;
+  }
+
+  .premium-withdrawal-popup h2 {
+    font-size: 29px;
+  }
+
+  .premium-withdrawal-popup .promo-v2-hero-copy {
+    bottom: 14px;
+  }
+
+  .premium-withdrawal-popup .promo-v2-hero-copy strong {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 430px) {
+  .premium-withdrawal-popup {
+    height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px);
+    grid-template-rows: 118px minmax(0, 1fr);
+  }
+
+  .premium-withdrawal-popup .promo-v2-content {
+    padding: 16px 14px 14px;
+  }
+
+  .premium-withdrawal-popup .promo-v2-kicker {
+    margin-top: 12px;
+  }
+
+  .premium-withdrawal-popup h2 {
+    font-size: 25px;
+  }
+
+  .premium-withdrawal-popup .promo-v2-copy {
+    font-size: 11px;
+  }
+
+  .premium-withdrawal-popup .premium-withdrawal-grid {
+    margin-top: 12px;
+  }
+
+  .premium-withdrawal-popup .premium-withdrawal-card {
+    padding: 11px 9px;
+  }
+
+  .premium-withdrawal-popup .promo-v2-note {
+    font-size: 8.5px;
+  }
+
+  .premium-withdrawal-popup .promo-v2-actions {
+    grid-template-columns: 1fr;
+  }
+}
