@@ -20,6 +20,10 @@ import {
   isWithdrawalWindow,
   withdrawalWindowLabel,
 } from "@/lib/withdrawal-window";
+import {
+  premiumPlanMinDeposit,
+  premiumPlanStartAt,
+} from "@/lib/premium-plan";
 
 const schema = z.discriminatedUnion("action", [
   z.object({
@@ -1183,12 +1187,34 @@ export async function POST(
       input.action ===
       "withdrawal"
     ) {
-      if (
-        !isWithdrawalWindow()
-      ) {
-        throw new Error(
-          `Saques disponíveis ${withdrawalWindowLabel}, no horário de Brasília.`,
+      if (!isWithdrawalWindow()) {
+        const {
+          data: premiumDeposits,
+          error: premiumDepositsError,
+        } = await db
+          .from("deposits")
+          .select("amount")
+          .eq("user_id", user.id)
+          .eq("status", "completed")
+          .gte("created_at", premiumPlanStartAt);
+
+        if (premiumDepositsError) {
+          throw premiumDepositsError;
+        }
+
+        const premiumDeposited = (
+          premiumDeposits ?? []
+        ).reduce(
+          (total, row) =>
+            total + Math.max(0, Number(row.amount) || 0),
+          0,
         );
+
+        if (premiumDeposited < premiumPlanMinDeposit) {
+          throw new Error(
+            `A janela padrão de saque está fechada. O Plano Prêmio exige pelo menos R$ 50,00 em depósitos confirmados feitos depois do início da promoção. Total atual: R$ ${premiumDeposited.toFixed(2).replace(".", ",")}.`,
+          );
+        }
       }
 
       const receiverNationalRegistration =

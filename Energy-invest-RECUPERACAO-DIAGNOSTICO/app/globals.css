@@ -4446,3 +4446,74 @@ table td small { display: block; margin-top: 6px; color: var(--muted); }
     min-height: 46px;
   }
 }
+
+/* Rede de indicações — visual em pirâmide */
+.referral-pyramid {
+  margin: 20px 0 24px;
+  padding: 22px 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff;
+  text-align: center;
+}
+.referral-pyramid-top {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, .08);
+}
+.referral-pyramid-top .avatar.small {
+  margin: 0;
+}
+.referral-pyramid-line {
+  width: 2px;
+  height: 24px;
+  margin: 0 auto;
+  background: var(--line);
+}
+.referral-pyramid-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+.referral-pyramid-member {
+  min-width: 0;
+  padding: 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  background: #fff;
+}
+.referral-pyramid-member .avatar.small {
+  margin: 0;
+}
+.referral-pyramid-member strong,
+.referral-pyramid-member small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.referral-pyramid-member small,
+.referral-pyramid-more {
+  color: var(--muted);
+}
+.referral-pyramid-more {
+  display: block;
+  margin-top: 14px;
+}
+@media (max-width: 620px) {
+  .referral-pyramid {
+    padding: 18px 12px;
+  }
+  .referral-pyramid-members {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

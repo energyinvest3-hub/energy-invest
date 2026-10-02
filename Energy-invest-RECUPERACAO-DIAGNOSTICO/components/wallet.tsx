@@ -37,6 +37,10 @@ import {
   isWithdrawalWindow,
   withdrawalWindowLabel,
 } from "@/lib/withdrawal-window";
+import {
+  premiumPlanDepositTotal,
+  premiumPlanMinDeposit,
+} from "@/lib/premium-plan";
 export function TransactionItem({
   transaction: t,
 }: {
@@ -477,6 +481,14 @@ export function WithdrawalPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const windowOpen = isWithdrawalWindow();
+  const premiumDeposited = premiumPlanDepositTotal(
+    data.transactions,
+  );
+  const premiumEligible =
+    premiumDeposited >= premiumPlanMinDeposit;
+  const canWithdrawNow =
+    windowOpen || premiumEligible;
+
   const keyValid =
     pixKeyType === "email"
       ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)
@@ -605,17 +617,37 @@ export function WithdrawalPage() {
           <div className="info-box">
             <ShieldCheck size={19} />
             <p>
-              Solicitações ficam disponíveis {withdrawalWindowLabel}, no horário de Brasília. É permitido apenas 1 saque por dia por conta. Após sua solicitação, o valor fica reservado até o processamento do PIX.
+              A janela padrão de saque funciona {withdrawalWindowLabel},
+              no horário de Brasília. O <strong>Plano Prêmio</strong> permite
+              solicitar saque fora da janela padrão após pelo menos{" "}
+              <strong>{money(premiumPlanMinDeposit)}</strong> em depósitos
+              confirmados feitos depois do início desta promoção. É permitido
+              apenas 1 saque por dia por conta.
             </p>
           </div>
-          {!windowOpen && (
+
+          {!windowOpen && premiumEligible && (
+            <div className="info-box" role="status">
+              <Gift size={19} />
+              <p>
+                <strong>Plano Prêmio ativo.</strong> Você possui{" "}
+                {money(premiumDeposited)} em depósitos confirmados nesta
+                promoção e pode solicitar o saque agora.
+              </p>
+            </div>
+          )}
+
+          {!windowOpen && !premiumEligible && (
             <p className="field-error" role="status">
-              Janela de saque fechada. Os saques ficam disponíveis diariamente das 09:00 às 18:00, no horário de Brasília.
+              A janela padrão está fechada. Para usar o Plano Prêmio agora,
+              complete {money(premiumPlanMinDeposit)} em depósitos confirmados
+              nesta promoção. Você possui {money(premiumDeposited)}.
             </p>
           )}
+
           <button
             className="button primary full"
-            disabled={!valid || !windowOpen}
+            disabled={!valid || !canWithdrawNow}
             onClick={() => setConfirm(true)}
           >
             Solicitar saque

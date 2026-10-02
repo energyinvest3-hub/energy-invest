@@ -571,6 +571,47 @@ function ReferralProgramFeature({ section }: { section: string }) {
           <h2>{referral.invitedCount} pessoa{referral.invitedCount === 1 ? "" : "s"} indicada{referral.invitedCount === 1 ? "" : "s"}</h2>
           <p>Aqui aparecem apenas pessoas que criaram a conta usando seu código de convite.</p>
         </div>
+        {referral.referrals.length > 0 && (
+          <div
+            className="referral-pyramid"
+            aria-label="Rede de indicações diretas"
+          >
+            <div className="referral-pyramid-top">
+              <span className="avatar small">
+                {data.profile.name.charAt(0).toUpperCase()}
+              </span>
+              <strong>Você</strong>
+            </div>
+
+            <div className="referral-pyramid-line" />
+
+            <div className="referral-pyramid-members">
+              {referral.referrals.slice(0, 6).map((member) => (
+                <div
+                  className="referral-pyramid-member"
+                  key={`pyramid-${member.id}`}
+                >
+                  <span className="avatar small">
+                    {member.name.charAt(0).toUpperCase()}
+                  </span>
+                  <strong>{member.name}</strong>
+                  <small>
+                    {member.qualified
+                      ? "Qualificado"
+                      : "Em andamento"}
+                  </small>
+                </div>
+              ))}
+            </div>
+
+            {referral.referrals.length > 6 && (
+              <small className="referral-pyramid-more">
+                +{referral.referrals.length - 6} pessoa(s) na sua rede
+              </small>
+            )}
+          </div>
+        )}
+
         {referral.referrals.length === 0 ? (
           <EmptyState
             title="Sua rede começa no primeiro convite"
