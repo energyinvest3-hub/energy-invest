@@ -25,7 +25,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { AppData } from "@/lib/types";
+import { money } from "@/lib/format";
 import { performAction } from "@/services/projects";
+import {
+  premiumPlanDepositTotal,
+  premiumPlanMinDeposit,
+} from "@/lib/premium-plan";
 const Context = createContext<{
   data: AppData;
   toast: (message: string, error?: boolean) => void;
@@ -243,8 +248,21 @@ function LaunchWelcomeModal() {
   const { data } = useApp();
   const [open, setOpen] = useState(false);
 
-  // v2 força a nova campanha a aparecer uma única vez após esta atualização.
-  const storageKey = `energyinvest-promo-100-150-2026-09-v2:${data.profile.id}`;
+  const premiumDeposited = premiumPlanDepositTotal(
+    data.transactions,
+  );
+  const premiumRemaining = Math.max(
+    0,
+    premiumPlanMinDeposit - premiumDeposited,
+  );
+  const premiumEligible =
+    premiumDeposited >= premiumPlanMinDeposit;
+
+  // Mostra uma vez enquanto bloqueado e novamente quando o benefício for liberado.
+  const storageKey =
+    `energyinvest-premium-withdrawal-2026-10-v4:${data.profile.id}:${
+      premiumEligible ? "active" : "locked"
+    }`;
 
   useEffect(() => {
     try {
@@ -282,10 +300,10 @@ function LaunchWelcomeModal() {
       onMouseDown={close}
     >
       <section
-        className="promo-v2"
+        className="promo-v2 premium-withdrawal-popup"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="promo-v2-title"
+        aria-labelledby="premium-withdrawal-title"
         onMouseDown={(event) =>
           event.stopPropagation()
         }
@@ -305,108 +323,138 @@ function LaunchWelcomeModal() {
           </div>
 
           <p className="promo-v2-kicker">
-            NOVOS PREÇOS LIBERADOS
+            {premiumEligible
+              ? "PLANO PRÊMIO ATIVO"
+              : "SAQUE PREMIUM"}
           </p>
 
-          <h2 id="promo-v2-title">
-            Dois painéis entraram em{" "}
-            <span>promoção.</span>
+          <h2 id="premium-withdrawal-title">
+            {premiumEligible ? (
+              <>
+                Seu <span>saque premium</span> está
+                liberado.
+              </>
+            ) : (
+              <>
+                Deposite R$ 50,00 e libere o{" "}
+                <span>saque premium.</span>
+              </>
+            )}
           </h2>
 
           <p className="promo-v2-copy">
-            Aproveite os novos valores promocionais
-            e confira duas opções selecionadas com
-            condições especiais por tempo limitado.
+            {premiumEligible
+              ? `Você já atingiu ${money(
+                  premiumPlanMinDeposit,
+                )} em depósitos confirmados desta promoção e pode solicitar saque fora da janela padrão.`
+              : `Complete o valor mínimo em depósitos confirmados e desbloqueie a solicitação de saque fora da janela padrão. Você já possui ${money(
+                  premiumDeposited,
+                )}; faltam ${money(
+                  premiumRemaining,
+                )}.`}
           </p>
 
           <div
-            className="promo-v2-offers"
-            aria-label="Painéis em promoção"
+            className="premium-withdrawal-grid"
+            aria-label="Benefícios do Plano Prêmio"
           >
-            <article className="promo-v2-offer">
-              <div className="promo-v2-offer-image">
-                <Image
-                  src="/solar-3.jpg"
-                  alt="Painéis solares do Solar Rio Residencial"
-                  fill
-                  sizes="180px"
-                />
-                <span>PREÇO PROMOCIONAL</span>
-              </div>
+            <article className="premium-withdrawal-card">
+              <span className="premium-withdrawal-icon">
+                <Wallet size={21} />
+              </span>
 
-              <div className="promo-v2-offer-body">
-                <small>Solar Rio Residencial</small>
-                <strong>R$ 100,00</strong>
-
-                <div>
-                  <span>15 dias</span>
-                  <i />
-                  <span>2,5x</span>
-                </div>
-              </div>
+              <small>Depósito mínimo</small>
+              <strong>{money(premiumPlanMinDeposit)}</strong>
+              <p>em depósitos confirmados</p>
             </article>
 
-            <article className="promo-v2-offer">
-              <div className="promo-v2-offer-image">
-                <Image
-                  src="/solar-8.png"
-                  alt="Painéis solares do Solar Paraná Pro"
-                  fill
-                  sizes="180px"
-                />
-                <span>PREÇO PROMOCIONAL</span>
-              </div>
+            <article className="premium-withdrawal-card">
+              <span className="premium-withdrawal-icon">
+                <Sparkles size={21} />
+              </span>
 
-              <div className="promo-v2-offer-body">
-                <small>Solar Paraná Pro</small>
-                <strong>R$ 150,00</strong>
-
-                <div>
-                  <span>15 dias</span>
-                  <i />
-                  <span>2,5x</span>
-                </div>
-              </div>
+              <small>Benefício</small>
+              <strong>
+                {premiumEligible
+                  ? "Saque liberado"
+                  : "Saque premium"}
+              </strong>
+              <p>fora da janela padrão</p>
             </article>
           </div>
+
+          {!premiumEligible && (
+            <div
+              className="premium-withdrawal-progress"
+              aria-label={`Progresso do Plano Prêmio: ${money(
+                premiumDeposited,
+              )} de ${money(premiumPlanMinDeposit)}`}
+            >
+              <div>
+                <span>Seu progresso</span>
+                <strong>
+                  {money(premiumDeposited)} /{" "}
+                  {money(premiumPlanMinDeposit)}
+                </strong>
+              </div>
+
+              <progress
+                value={Math.min(
+                  premiumDeposited,
+                  premiumPlanMinDeposit,
+                )}
+                max={premiumPlanMinDeposit}
+              />
+            </div>
+          )}
 
           <div className="promo-v2-note">
             <ShieldCheck size={18} />
             <span>
-              Oferta promocional por tempo limitado.
-              Consulte disponibilidade e detalhes de
-              cada projeto antes de participar.
-              Projeções não são garantia de resultado.
-              <br />
-              <strong>Plano Prêmio:</strong> após R$ 50,00 em depósitos
-              confirmados feitos desde o início da promoção, a conta pode
-              solicitar saque fora da janela padrão de segunda a sexta,
-              das 09:00 às 18:00.
+              <strong>Plano Prêmio:</strong> após{" "}
+              {money(premiumPlanMinDeposit)} em depósitos
+              confirmados feitos desde o início da promoção,
+              a conta pode solicitar saque fora da janela
+              padrão de segunda a sexta, das 09:00 às 18:00.
+              Dentro da janela padrão, seguem as regras normais
+              de saque da plataforma.
             </span>
           </div>
 
           <div className="promo-v2-actions">
             <Link
-              href="/projetos"
+              href={
+                premiumEligible
+                  ? "/carteira/saque"
+                  : "/carteira/deposito"
+              }
               className="button primary"
               onClick={close}
             >
-              Quero aproveitar
+              {premiumEligible
+                ? "Solicitar saque"
+                : "Quero liberar"}
               <ArrowUpRight size={18} />
             </Link>
 
             <Link
-              href="/carteira/deposito"
+              href={
+                premiumEligible
+                  ? "/carteira"
+                  : "/carteira/saque"
+              }
               className="button outline"
               onClick={close}
             >
-              Adicionar saldo
+              {premiumEligible
+                ? "Ver carteira"
+                : "Ver regras do saque"}
             </Link>
           </div>
         </div>
 
         <div
-          className="promo-v2-hero"
+          className="promo-v2-hero premium-withdrawal-hero"
           aria-hidden="true"
         >
           <Image
@@ -422,10 +470,14 @@ function LaunchWelcomeModal() {
           <div className="promo-v2-hero-copy">
             <span>ENERGYINVEST</span>
             <strong>
-              Energia que transforma possibilidades.
+              {premiumEligible
+                ? "Plano Prêmio liberado para sua conta."
+                : "Mais liberdade para sacar com o Plano Prêmio."}
             </strong>
             <small>
-              Condições especiais disponíveis agora.
+              {premiumEligible
+                ? "Seu benefício promocional está ativo."
+                : "Condição promocional disponível agora."}
             </small>
           </div>
         </div>
@@ -433,7 +485,6 @@ function LaunchWelcomeModal() {
     </div>
   );
 }
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { data } = useApp();

@@ -4517,3 +4517,132 @@ table td small { display: block; margin-top: 6px; color: var(--muted); }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Popup Plano Prêmio / Saque Premium */
+.premium-withdrawal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.premium-withdrawal-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #edf0f1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(19, 45, 38, .07);
+}
+
+.premium-withdrawal-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #eff8f3;
+  color: #21875e;
+}
+
+.premium-withdrawal-card > small {
+  display: block;
+  color: #51626d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.premium-withdrawal-card > strong {
+  display: block;
+  margin-top: 5px;
+  color: #e8671d;
+  font-size: 24px;
+  line-height: 1.08;
+  letter-spacing: -.7px;
+}
+
+.premium-withdrawal-card > p {
+  margin: 8px 0 0;
+  color: #89959c;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.premium-withdrawal-progress {
+  margin-top: 14px;
+  padding: 13px 14px;
+  border: 1px solid #eceff0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.premium-withdrawal-progress > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 9px;
+  color: #6f7d86;
+  font-size: 10px;
+}
+
+.premium-withdrawal-progress strong {
+  color: #172d3b;
+}
+
+.premium-withdrawal-progress progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  accent-color: #ef762b;
+}
+
+.premium-withdrawal-progress progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: #edf1ef;
+}
+
+.premium-withdrawal-progress progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f18a43, #ef762b);
+}
+
+.premium-withdrawal-hero > img {
+  object-position: center;
+}
+
+@media (max-width: 430px) {
+  .premium-withdrawal-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .premium-withdrawal-card {
+    padding: 13px 11px;
+  }
+
+  .premium-withdrawal-icon {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 10px;
+  }
+
+  .premium-withdrawal-icon svg {
+    width: 18px;
+  }
+
+  .premium-withdrawal-card > small {
+    font-size: 9px;
+  }
+
+  .premium-withdrawal-card > strong {
+    font-size: 17px;
+  }
+
+  .premium-withdrawal-card > p {
+    font-size: 9px;
+  }
+}
