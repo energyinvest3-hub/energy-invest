@@ -55,11 +55,30 @@ export async function getAppData(): Promise<AppData> {
     db.rpc("get_referral_summary"),
     db.rpc("get_special_referral_summary"),
   ]);
-  const fail = results.find((r) => r.error);
-  if (fail?.error)
+  // Never mask which Supabase query failed. Avoid logging account details,
+  // credentials, JWTs, SQL parameters, or returned rows.
+  const queryNames = [
+    "profiles", "wallets", "solar_projects", "user_projects",
+    "transactions", "notifications", "project_credits", "user_tasks",
+    "goal_definitions", "user_rewards", "get_referral_summary",
+    "get_special_referral_summary",
+  ] as const;
+  const failures = results.flatMap((result, index) =>
+    result.error
+      ? [{
+          query: queryNames[index],
+          code: result.error.code ?? "unknown",
+          message: result.error.message,
+          hint: result.error.hint ?? null,
+        }]
+      : [],
+  );
+  if (failures.length > 0) {
+    console.error("[EnergyInvest] Supabase query failures:", failures);
     throw new Error(
       "Não foi possível carregar sua conta. Verifique a configuração do banco.",
     );
+  }
   const [
     profile,
     wallet,
