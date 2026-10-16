@@ -55,30 +55,42 @@ export async function getAppData(): Promise<AppData> {
     db.rpc("get_referral_summary"),
     db.rpc("get_special_referral_summary"),
   ]);
-  // Never mask which Supabase query failed. Avoid logging account details,
-  // credentials, JWTs, SQL parameters, or returned rows.
+  // A migration can leave non-financial features (notifications, tasks,
+  // referrals) unavailable. Log them but keep the account accessible.
+  // NEVER default balances, investments, credits, or rewards to zero.
   const queryNames = [
     "profiles", "wallets", "solar_projects", "user_projects",
     "transactions", "notifications", "project_credits", "user_tasks",
     "goal_definitions", "user_rewards", "get_referral_summary",
     "get_special_referral_summary",
   ] as const;
+  const optionalQueryIndexes = new Set([5, 7, 10, 11]);
   const failures = results.flatMap((result, index) =>
     result.error
       ? [{
           query: queryNames[index],
           code: result.error.code ?? "unknown",
           message: result.error.message,
-          hint: result.error.hint ?? null,
+          optional: optionalQueryIndexes.has(index),
         }]
       : [],
   );
   if (failures.length > 0) {
+    // Avoid logging returned rows, JWTs, emails, or other personal data.
     console.error("[EnergyInvest] Supabase query failures:", failures);
+  }
+  if (failures.some((failure) => !failure.optional)) {
     throw new Error(
       "Não foi possível carregar sua conta. Verifique a configuração do banco.",
     );
   }
+  // Fallback is limited to non-financial features; keep critical reads strict.
+  const safeResults = results.map((result, index) => {
+    if (!result.error) return result.data;
+    if (index === 5 || index === 7) return [];
+    if (index === 10 || index === 11) return null;
+    return result.data;
+  });
   const [
     profile,
     wallet,
@@ -92,7 +104,7 @@ export async function getAppData(): Promise<AppData> {
     rewards,
     referralRaw,
     specialReferralRaw,
-  ] = results.map((r) => r.data);
+  ] = safeResults;
   const specialReferral = specialReferralRaw as Record<string, unknown> | null;
   const referral = (
     specialReferral && Boolean(specialReferral.active)

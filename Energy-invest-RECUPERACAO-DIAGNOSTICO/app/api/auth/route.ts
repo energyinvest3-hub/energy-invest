@@ -40,9 +40,10 @@ export async function POST(request: Request) {
       const login = identifier.includes("@")
         ? { email: identifier.toLowerCase(), password: d.password! }
         : {
-            phone: identifier.startsWith("+")
-              ? identifier.replace(/[^+\d]/g, "")
-              : `+55${identifier.replace(/\D/g, "")}`,
+            phone: (() => {
+              const digits = identifier.replace(/\D/g, "");
+              return `+${digits.startsWith("55") ? digits : `55${digits}`}`;
+            })(),
             password: d.password!,
           };
       const { error } = await db.auth.signInWithPassword(login);
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
 
     const appUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://energy-invest-git-main-energy-invest.vercel.app";
+      "https://www.energyinvest.com.br";
 
     if (d.action === "signup") {
       const normalizedInviteCode = d.inviteCode?.trim().toUpperCase() || "";
@@ -82,8 +83,8 @@ export async function POST(request: Request) {
         }
       }
 
-      // Use the server-side registration function. It creates an already-confirmed
-      // Supabase Auth user and triggers profile + wallet creation atomically.
+      // Prefer the existing server-side registration function when deployed.
+      // It might be missing from a database-only Supabase migration (HTTP 404).
       const register = await fetch(`${SUPABASE_URL}/functions/v1/register-user`, {
         method: "POST",
         headers: {
@@ -95,14 +96,61 @@ export async function POST(request: Request) {
           phone: d.phone,
           password: d.password,
           inviteCode:
-            d.inviteCode?.trim().toUpperCase() === "JV1164778"
+            normalizedInviteCode === "JV1164778"
               ? ""
-              : d.inviteCode?.trim() || "",
+              : normalizedInviteCode,
         }),
         cache: "no-store",
       });
+      if (register.status === 404) {
+        console.warn("[EnergyInvest] register-user not deployed; using Supabase Auth signUp");
+        // Public Auth signup follows this project's email-confirmation policy.
+        // No service-role key is used and no confirmation is bypassed.
+        const { data: signupData, error: signupError } = await db.auth.signUp({
+          email: d.email!.trim().toLowerCase(),
+          password: d.password!,
+          options: {
+            data: {
+              name: d.name?.trim(),
+              phone: d.phone?.trim(),
+              invite_code:
+                normalizedInviteCode === "JV1164778"
+                  ? undefined
+                  : normalizedInviteCode || undefined,
+            },
+            emailRedirectTo: `${appUrl}/auth/callback`,
+          },
+        });
+        if (signupError) {
+          console.error("[EnergyInvest] Auth signup failed:", {
+            code: signupError.code ?? "unknown",
+            status: signupError.status ?? "unknown",
+          });
+          return Response.json(
+            { error: "Não foi possível criar a conta. Verifique o e-mail ou tente novamente." },
+            { status: signupError.status || 400 },
+          );
+        }
+        if (!signupData.user) {
+          return Response.json(
+            { error: "Não foi possível concluir seu cadastro agora." },
+            { status: 503 },
+          );
+        }
+        if (signupData.session) {
+          return Response.json({ ok: true, authenticated: true });
+        }
+        return Response.json({
+          ok: true,
+          authenticated: false,
+          message: "Cadastro recebido. Confira seu e-mail para confirmar a conta antes de entrar.",
+        });
+      }
       const result = await register.json().catch(() => ({}));
       if (!register.ok) {
+        console.error("[EnergyInvest] register-user failed:", {
+          status: register.status,
+        });
         const error =
           typeof result.error === "string"
             ? result.error
