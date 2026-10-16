@@ -21,7 +21,9 @@ export async function getAppData(): Promise<AppData> {
     data: { user },
   } = await db.auth.getUser();
   if (!user) redirect("/login");
-  const results = await Promise.all([
+  // Os créditos pertencem exclusivamente a participações já filtradas por
+  // user_id/RLS. Evitar join embutido do PostgREST reduz falhas após migração.
+  const initialResults = await Promise.all([
     db.from("profiles").select("*").eq("id", user.id).single(),
     db.from("wallets").select("*").eq("user_id", user.id).single(),
     db.from("solar_projects").select("*").order("created_at"),
@@ -36,11 +38,6 @@ export async function getAppData(): Promise<AppData> {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    db
-      .from("project_credits")
-      .select("*, user_projects!inner(user_id)")
-      .eq("user_projects.user_id", user.id)
-      .order("credit_number"),
     db.from("user_tasks").select("task_key").eq("user_id", user.id),
     db
       .from("goal_definitions")
@@ -55,6 +52,27 @@ export async function getAppData(): Promise<AppData> {
     db.rpc("get_referral_summary"),
     db.rpc("get_special_referral_summary"),
   ]);
+  const holdingIds = initialResults[3].error
+    ? []
+    : ((initialResults[3].data ?? []) as Array<{ id: string }>).map(
+        (holding) => holding.id,
+      );
+  // Se não existem participações, não há créditos a consultar.
+  // Erros nas participações continuam críticos e nunca viram saldo zero.
+  const creditsResult = initialResults[3].error
+    ? { data: [], error: null }
+    : holdingIds.length > 0
+      ? await db
+          .from("project_credits")
+          .select("*")
+          .in("user_project_id", holdingIds)
+          .order("credit_number")
+      : { data: [], error: null };
+  const results = [
+    ...initialResults.slice(0, 6),
+    creditsResult,
+    ...initialResults.slice(6),
+  ];
   // A migration can leave non-financial features (notifications, tasks,
   // referrals) unavailable. Log them but keep the account accessible.
   // NEVER default balances, investments, credits, or rewards to zero.
